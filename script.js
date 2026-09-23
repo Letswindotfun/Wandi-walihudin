@@ -110,8 +110,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const page = item.dataset.page;
 
       if (page === "dashboard") {
-        if (typeof window.renderLiveDashboard === "function") {
-          window.renderLiveDashboard();
+        if (typeof renderDashboard === "function") {
+          renderDashboard();
         }
         return;
       }
@@ -5285,211 +5285,245 @@ document.addEventListener("DOMContentLoaded", () => {
 /* =========================================================
    DASHBOARD LIVE V3
    EXECUTIVE BUSINESS CONTROL CENTER
-   DATA -> ANALYSIS -> ACTION
    ========================================================= */
 (function () {
   "use strict";
 
   const TX_KEY = "businessHubTransactions";
   const SALES_KEY = "businessHubSalesSafe";
-  const CUSTOMER_KEY = "businessHubCustomersSafe";
-  const PRODUCT_KEY = "businessHubProductsV3";
+  const PRODUCTS_KEY = "businessHubProductsV3";
+  const CUSTOMERS_KEY = "businessHubCustomersSafe";
   const TARGET_KEY = "businessHubSalesTargetsV1";
 
   let currentPeriod = 30;
 
   function read(key, fallback) {
     try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return fallback;
-      return JSON.parse(raw);
-    } catch (e) {
+      const value = JSON.parse(localStorage.getItem(key));
+      return Array.isArray(value) ? value : fallback;
+    } catch {
       return fallback;
     }
   }
 
-  function arr(key) {
-    const data = read(key, []);
-    return Array.isArray(data) ? data : [];
+  function money(value) {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0
+    }).format(Number(value || 0));
   }
 
-  function money(v) {
-    return "Rp " + Number(v || 0).toLocaleString("id-ID");
+  function compact(value) {
+    value = Number(value || 0);
+    if (value >= 1000000000) return "Rp " + (value / 1000000000).toFixed(1) + " M";
+    if (value >= 1000000) return "Rp " + (value / 1000000).toFixed(1) + " jt";
+    if (value >= 1000) return "Rp " + (value / 1000).toFixed(0) + " rb";
+    return money(value);
   }
 
-  function compact(v) {
-    v = Number(v || 0);
-
-    if (Math.abs(v) >= 1000000000) {
-      return "Rp " + (v / 1000000000).toFixed(1) + " M";
-    }
-
-    if (Math.abs(v) >= 1000000) {
-      return "Rp " + (v / 1000000).toFixed(1) + " Jt";
-    }
-
-    if (Math.abs(v) >= 1000) {
-      return "Rp " + (v / 1000).toFixed(0) + " Rb";
-    }
-
-    return money(v);
-  }
-
-  function esc(v) {
-    return String(v ?? "")
+  function esc(value) {
+    return String(value ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+      .replace(/"/g, "&quot;");
   }
 
-  function dateObj(value) {
-    if (!value) return null;
-
+  function dateValue(value) {
     const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? new Date() : d;
+  }
 
-    if (Number.isNaN(d.getTime())) return null;
-
+  function daysAgo(period) {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);
+    d.setDate(d.getDate() - period + 1);
+    d.setHours(0, 0, 0, 0);
     return d;
   }
 
-  function inPeriod(value, days) {
-    const d = dateObj(value);
-
-    if (!d) return true;
-
-    const now = new Date();
-    const from = new Date();
-
-    from.setHours(0, 0, 0, 0);
-    from.setDate(now.getDate() - (days - 1));
-
-    return d >= from && d <= now;
-  }
-
   function navigate(page) {
-    const nav = document.querySelector('[data-page="' + page + '"]');
-
-    if (nav) {
-      nav.click();
-    }
+    const el = document.querySelector('[data-page="' + page + '"]');
+    if (el) el.click();
   }
 
   function renderDashboard() {
     const content = document.querySelector(".content");
-
     if (!content) return;
 
-    const transactions = arr(TX_KEY);
-    const sales = arr(SALES_KEY);
-    const customers = arr(CUSTOMER_KEY);
-    const products = arr(PRODUCT_KEY);
+    const transactions = read(TX_KEY, []);
+    const sales = read(SALES_KEY, []);
+    const products = read(PRODUCTS_KEY, []);
+    const customers = read(CUSTOMERS_KEY, []);
+    const targetData = read(TARGET_KEY, []);
 
-    const targetData = read(TARGET_KEY, {});
-    const revenueTarget =
-      Number(targetData.revenueTarget || 100000000);
+    const cutoff = daysAgo(currentPeriod);
 
-    const tx = transactions.filter(t =>
-      inPeriod(t.date, currentPeriod)
-    );
+    const periodTx = transactions.filter(t => dateValue(t.date) >= cutoff);
+    const periodSales = sales.filter(s => dateValue(s.date) >= cutoff);
 
-    const periodSales = sales.filter(s =>
-      inPeriod(s.date, currentPeriod)
-    );
-
-    const revenue = tx
+    const revenue = periodTx
       .filter(t => String(t.type).toLowerCase() === "income")
-      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      .reduce((a, t) => a + Number(t.amount || 0), 0);
 
-    const expenses = tx
+    const expenses = periodTx
       .filter(t => String(t.type).toLowerCase() === "expense")
-      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      .reduce((a, t) => a + Number(t.amount || 0), 0);
 
     const profit = revenue - expenses;
+    const margin = revenue ? (profit / revenue) * 100 : 0;
 
-    const salesRevenue = periodSales
-      .filter(s =>
-        String(s.status || "Completed").toLowerCase() === "completed"
-      )
-      .reduce((sum, s) => sum + Number(s.amount || 0), 0);
-
-    const profitMargin =
-      revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
-
-    const expenseRatio =
-      revenue > 0 ? Math.round((expenses / revenue) * 100) : 0;
-
-    const targetProgress =
-      revenueTarget > 0
-        ? Math.min(100, Math.round((revenue / revenueTarget) * 100))
-        : 0;
-
-    const activeCustomers = customers.filter(c =>
-      String(c.status || "Active").toLowerCase() === "active"
-    ).length;
-
-    const lowStock = products.filter(p => {
-      const stock = Number(p.stock || 0);
-      const target = Number(
-        p.targetStock ?? p.target ?? 0
-      );
-
-      return target > 0 && stock < target;
-    });
+    const salesRevenue = periodSales.reduce(
+      (a, s) => a + Number(s.amount || 0), 0
+    );
 
     const inventoryValue = products.reduce(
-      (sum, p) =>
-        sum +
-        Number(p.price || 0) *
-        Number(p.stock || 0),
+      (a, p) =>
+        a +
+        Number(p.stock || 0) *
+        Number(p.price || 0),
       0
     );
 
-    const completedSales = periodSales.filter(s =>
-      String(s.status || "Completed").toLowerCase() === "completed"
+    const lowStock = products.filter(
+      p => Number(p.stock || 0) < Number(p.targetStock ?? p.target ?? 0)
     );
 
-    const averageSale =
-      completedSales.length
-        ? salesRevenue / completedSales.length
-        : 0;
+    const target =
+      targetData.find &&
+      targetData.find(t => t.month === new Date().toISOString().slice(0, 7));
 
-    /* ---------------------------------------------
-       DAILY TREND
-       --------------------------------------------- */
+    const revenueTarget = Number(
+      target?.revenueTarget || 100000000
+    );
 
-    const today = new Date();
+    const achievement = revenueTarget
+      ? (revenue / revenueTarget) * 100
+      : 0;
 
-    const trend = [];
+    const productMap = {};
 
+    periodSales.forEach(s => {
+      const key = s.product || "Unknown Product";
+      if (!productMap[key]) {
+        productMap[key] = {
+          name: key,
+          revenue: 0,
+          qty: 0
+        };
+      }
+      productMap[key].revenue += Number(s.amount || 0);
+      productMap[key].qty += Number(s.qty || 0);
+    });
+
+    const topProducts = Object.values(productMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    const customerMap = {};
+
+    periodSales.forEach(s => {
+      const key = s.customerName || s.customer || "Unknown Customer";
+      if (!customerMap[key]) {
+        customerMap[key] = {
+          name: key,
+          revenue: 0,
+          orders: 0
+        };
+      }
+      customerMap[key].revenue += Number(s.amount || 0);
+      customerMap[key].orders++;
+    });
+
+    const topCustomers = Object.values(customerMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    const recent = [...periodTx, ...periodSales.map(s => ({
+      date: s.date,
+      type: "sale",
+      description: s.product || "Sale",
+      amount: s.amount
+    }))]
+      .sort((a, b) => dateValue(b.date) - dateValue(a.date))
+      .slice(0, 6);
+
+    const opportunities = [];
+
+    if (profit < 0) {
+      opportunities.push({
+        type: "danger",
+        icon: "⚠",
+        title: "Profit negatif",
+        text: "Pengeluaran periode ini lebih besar dari revenue.",
+        page: "expenses"
+      });
+    }
+
+    if (achievement < 70) {
+      opportunities.push({
+        type: "warning",
+        icon: "↗",
+        title: "Revenue di bawah target",
+        text: achievement.toFixed(0) + "% dari target revenue.",
+        page: "sales"
+      });
+    }
+
+    if (lowStock.length) {
+      opportunities.push({
+        type: "warning",
+        icon: "!",
+        title: lowStock.length + " produk perlu restock",
+        text: "Beberapa produk berada di bawah batas stok.",
+        page: "products"
+      });
+    }
+
+    if (margin >= 30) {
+      opportunities.push({
+        type: "success",
+        icon: "✓",
+        title: "Margin sehat",
+        text: "Profit margin mencapai " + margin.toFixed(1) + "%.",
+        page: "finance"
+      });
+    }
+
+    if (!opportunities.length) {
+      opportunities.push({
+        type: "success",
+        icon: "✓",
+        title: "Tidak ada alert utama",
+        text: "Kondisi bisnis terlihat stabil pada periode ini.",
+        page: "finance"
+      });
+    }
+
+    const maxChart = Math.max(revenue, expenses, 1);
+
+    const chartBars = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(today);
-      d.setHours(0, 0, 0, 0);
-      d.setDate(today.getDate() - i);
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
 
-      const key =
-        d.getFullYear() +
-        "-" +
-        String(d.getMonth() + 1).padStart(2, "0") +
-        "-" +
-        String(d.getDate()).padStart(2, "0");
-
-      const dayRevenue = tx
+      const dayRevenue = transactions
         .filter(t =>
           String(t.type).toLowerCase() === "income" &&
-          String(t.date || "").slice(0, 10) === key
+          String(t.date).slice(0, 10) === key
         )
-        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+        .reduce((a, t) => a + Number(t.amount || 0), 0);
 
-      const dayExpense = tx
+      const dayExpense = transactions
         .filter(t =>
           String(t.type).toLowerCase() === "expense" &&
-          String(t.date || "").slice(0, 10) === key
+          String(t.date).slice(0, 10) === key
         )
-        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+        .reduce((a, t) => a + Number(t.amount || 0), 0);
 
-      trend.push({
+      chartBars.push({
         label: d.toLocaleDateString("id-ID", {
           day: "2-digit",
           month: "short"
@@ -5499,1277 +5533,687 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    const maxTrend = Math.max(
-      1,
-      ...trend.flatMap(x => [x.revenue, x.expense])
-    );
-
-    /* ---------------------------------------------
-       TOP PRODUCTS
-       --------------------------------------------- */
-
-    const productMap = {};
-
-    completedSales.forEach(s => {
-      const name =
-        s.productName ||
-        s.product ||
-        "Unknown Product";
-
-      productMap[name] =
-        (productMap[name] || 0) +
-        Number(s.amount || 0);
-    });
-
-    const topProducts = Object.entries(productMap)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    /* ---------------------------------------------
-       TOP CUSTOMERS
-       --------------------------------------------- */
-
-    const customerMap = {};
-
-    completedSales.forEach(s => {
-      const name =
-        s.customer ||
-        s.customerName ||
-        "Unknown Customer";
-
-      customerMap[name] =
-        (customerMap[name] || 0) +
-        Number(s.amount || 0);
-    });
-
-    const topCustomers = Object.entries(customerMap)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    /* ---------------------------------------------
-       OPPORTUNITIES
-       --------------------------------------------- */
-
-    const opportunities = [];
-
-    if (profit < 0 && revenue > 0) {
-      opportunities.push({
-        level: "critical",
-        title: "Profit negatif",
-        text: "Expenses lebih besar daripada revenue.",
-        action: "expenses",
-        button: "Review Expenses"
-      });
-    }
-
-    if (expenseRatio >= 50) {
-      opportunities.push({
-        level: "warning",
-        title: "Expense ratio tinggi",
-        text: "Expenses mencapai " + expenseRatio + "% dari revenue.",
-        action: "expenses",
-        button: "Analyze Expenses"
-      });
-    }
-
-    if (targetProgress < 70) {
-      opportunities.push({
-        level: "warning",
-        title: "Revenue masih di bawah target",
-        text:
-          "Achievement baru " +
-          targetProgress +
-          "% dari target " +
-          compact(revenueTarget) +
-          ".",
-        action: "sales",
-        button: "Open Sales"
-      });
-    }
-
-    if (lowStock.length > 0) {
-      opportunities.push({
-        level: "warning",
-        title: lowStock.length + " produk perlu restock",
-        text: "Stock berada di bawah target inventory.",
-        action: "products",
-        button: "Review Products"
-      });
-    }
-
-    if (profitMargin >= 30 && revenue > 0) {
-      opportunities.push({
-        level: "positive",
-        title: "Margin bisnis sehat",
-        text:
-          "Profit margin saat ini mencapai " +
-          profitMargin +
-          "%.",
-        action: "finance",
-        button: "View Finance"
-      });
-    }
-
-    if (!opportunities.length) {
-      opportunities.push({
-        level: "positive",
-        title: "Tidak ada alert kritis",
-        text: "Kondisi bisnis saat ini berjalan normal.",
-        action: "finance",
-        button: "View Finance"
-      });
-    }
-
-    /* ---------------------------------------------
-       RECENT ACTIVITY
-       --------------------------------------------- */
-
-    const recent = [
-      ...transactions.map(t => ({
-        date: t.date,
-        title: t.description || t.category || "Transaction",
-        type:
-          String(t.type).toLowerCase() === "income"
-            ? "Revenue"
-            : "Expense",
-        amount: Number(t.amount || 0)
-      })),
-      ...sales.map(s => ({
-        date: s.date,
-        title:
-          "Sale — " +
-          (s.productName || s.product || "Product"),
-        type: "Sale",
-        amount: Number(s.amount || 0)
-      }))
-    ]
-      .sort((a, b) =>
-        new Date(b.date || 0) -
-        new Date(a.date || 0)
-      )
-      .slice(0, 7);
-
-    /* ---------------------------------------------
-       RENDER
-       --------------------------------------------- */
-
     content.innerHTML = `
-      <div class="dash-v3">
+      <div class="bh-dashboard">
 
-        <div class="dash-v3-header">
+        <style>
+          .bh-dashboard{
+            min-height:100%;
+            padding:28px;
+            background:#f5f7fb;
+            color:#172033;
+          }
+
+          .bh-head{
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-end;
+            gap:20px;
+            margin-bottom:24px;
+          }
+
+          .bh-head-kicker{
+            color:#667085;
+            font-size:12px;
+            font-weight:700;
+            text-transform:uppercase;
+            letter-spacing:.12em;
+            margin-bottom:6px;
+          }
+
+          .bh-head h1{
+            margin:0;
+            font-size:30px;
+            letter-spacing:-.03em;
+          }
+
+          .bh-head p{
+            margin:7px 0 0;
+            color:#667085;
+          }
+
+          .bh-controls{
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+          }
+
+          .bh-control{
+            border:1px solid #d9dee8;
+            background:#fff;
+            border-radius:10px;
+            padding:10px 13px;
+            font-weight:600;
+            color:#344054;
+          }
+
+          .bh-btn{
+            border:0;
+            border-radius:10px;
+            padding:10px 15px;
+            background:#172033;
+            color:#fff;
+            font-weight:700;
+            cursor:pointer;
+          }
+
+          .bh-btn:hover{opacity:.9}
+
+          .bh-kpis{
+            display:grid;
+            grid-template-columns:repeat(4,1fr);
+            gap:14px;
+            margin-bottom:18px;
+          }
+
+          .bh-kpi{
+            background:#fff;
+            border:1px solid #e5e9f0;
+            border-radius:16px;
+            padding:19px;
+            box-shadow:0 4px 14px rgba(16,24,40,.04);
+          }
+
+          .bh-kpi-label{
+            color:#667085;
+            font-size:13px;
+            font-weight:600;
+          }
+
+          .bh-kpi-value{
+            margin-top:8px;
+            font-size:25px;
+            font-weight:800;
+            letter-spacing:-.03em;
+          }
+
+          .bh-kpi-sub{
+            margin-top:8px;
+            color:#98a2b3;
+            font-size:12px;
+          }
+
+          .bh-layout{
+            display:grid;
+            grid-template-columns:minmax(0,1.7fr) minmax(300px,.8fr);
+            gap:18px;
+          }
+
+          .bh-card{
+            background:#fff;
+            border:1px solid #e5e9f0;
+            border-radius:16px;
+            padding:20px;
+            box-shadow:0 4px 14px rgba(16,24,40,.04);
+            margin-bottom:18px;
+          }
+
+          .bh-card-head{
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:15px;
+            margin-bottom:18px;
+          }
+
+          .bh-card-head h2{
+            margin:0;
+            font-size:17px;
+          }
+
+          .bh-card-head p{
+            margin:5px 0 0;
+            color:#98a2b3;
+            font-size:12px;
+          }
+
+          .bh-chart{
+            height:230px;
+            display:flex;
+            align-items:flex-end;
+            gap:12px;
+            padding-top:12px;
+          }
+
+          .bh-day{
+            flex:1;
+            height:100%;
+            display:flex;
+            flex-direction:column;
+            justify-content:flex-end;
+            gap:7px;
+            min-width:0;
+          }
+
+          .bh-bars{
+            height:190px;
+            display:flex;
+            align-items:flex-end;
+            justify-content:center;
+            gap:4px;
+          }
+
+          .bh-bar{
+            width:13px;
+            min-height:3px;
+            border-radius:5px 5px 2px 2px;
+          }
+
+          .bh-rev{background:#172033}
+          .bh-exp{background:#d0d5dd}
+
+          .bh-day-label{
+            text-align:center;
+            font-size:10px;
+            color:#98a2b3;
+          }
+
+          .bh-legend{
+            display:flex;
+            gap:18px;
+            font-size:12px;
+            color:#667085;
+          }
+
+          .bh-dot{
+            display:inline-block;
+            width:8px;
+            height:8px;
+            border-radius:50%;
+            margin-right:5px;
+          }
+
+          .bh-op{
+            display:flex;
+            gap:12px;
+            padding:13px 0;
+            border-bottom:1px solid #eef0f4;
+          }
+
+          .bh-op:last-child{border-bottom:0}
+
+          .bh-op-icon{
+            width:34px;
+            height:34px;
+            flex:0 0 34px;
+            border-radius:10px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:#f2f4f7;
+            font-weight:800;
+          }
+
+          .bh-op.danger .bh-op-icon{background:#fef3f2;color:#b42318}
+          .bh-op.warning .bh-op-icon{background:#fffaeb;color:#b54708}
+          .bh-op.success .bh-op-icon{background:#ecfdf3;color:#027a48}
+
+          .bh-op strong{display:block;font-size:13px}
+          .bh-op p{margin:4px 0 8px;color:#667085;font-size:12px;line-height:1.4}
+
+          .bh-link{
+            border:0;
+            background:none;
+            padding:0;
+            color:#344054;
+            font-size:12px;
+            font-weight:800;
+            cursor:pointer;
+          }
+
+          .bh-two{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:18px;
+          }
+
+          .bh-row{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            padding:12px 0;
+            border-bottom:1px solid #eef0f4;
+          }
+
+          .bh-row:last-child{border-bottom:0}
+
+          .bh-row-main{
+            min-width:0;
+          }
+
+          .bh-row-main strong{
+            display:block;
+            font-size:13px;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+          }
+
+          .bh-row-main span{
+            display:block;
+            color:#98a2b3;
+            font-size:11px;
+            margin-top:3px;
+          }
+
+          .bh-row-value{
+            font-weight:800;
+            font-size:12px;
+            white-space:nowrap;
+          }
+
+          .bh-progress{
+            height:7px;
+            background:#eef1f5;
+            border-radius:99px;
+            overflow:hidden;
+            margin-top:9px;
+          }
+
+          .bh-progress i{
+            display:block;
+            height:100%;
+            background:#172033;
+            border-radius:99px;
+          }
+
+          .bh-snapshot{
+            display:grid;
+            grid-template-columns:repeat(3,1fr);
+            gap:10px;
+          }
+
+          .bh-mini{
+            border:1px solid #eaecf0;
+            border-radius:12px;
+            padding:13px;
+          }
+
+          .bh-mini span{
+            display:block;
+            color:#98a2b3;
+            font-size:11px;
+          }
+
+          .bh-mini strong{
+            display:block;
+            margin-top:5px;
+            font-size:16px;
+          }
+
+          .bh-actions{
+            display:grid;
+            grid-template-columns:repeat(4,1fr);
+            gap:10px;
+          }
+
+          .bh-action{
+            border:1px solid #e5e9f0;
+            background:#fff;
+            border-radius:12px;
+            padding:14px;
+            text-align:left;
+            cursor:pointer;
+            font-weight:700;
+          }
+
+          .bh-action:hover{
+            border-color:#98a2b3;
+            transform:translateY(-1px);
+          }
+
+          .bh-table{
+            width:100%;
+            border-collapse:collapse;
+          }
+
+          .bh-table th{
+            text-align:left;
+            color:#98a2b3;
+            font-size:11px;
+            padding:10px 8px;
+            border-bottom:1px solid #eaecf0;
+          }
+
+          .bh-table td{
+            padding:11px 8px;
+            border-bottom:1px solid #f0f2f5;
+            font-size:12px;
+          }
+
+          .bh-type{
+            font-weight:800;
+          }
+
+          .bh-empty{
+            padding:20px 0;
+            text-align:center;
+            color:#98a2b3;
+            font-size:12px;
+          }
+
+          @media(max-width:1050px){
+            .bh-kpis{grid-template-columns:repeat(2,1fr)}
+            .bh-layout{grid-template-columns:1fr}
+          }
+
+          @media(max-width:700px){
+            .bh-dashboard{padding:16px}
+            .bh-head{align-items:stretch;flex-direction:column}
+            .bh-head h1{font-size:24px}
+            .bh-kpis{grid-template-columns:1fr 1fr}
+            .bh-two{grid-template-columns:1fr}
+            .bh-actions{grid-template-columns:1fr 1fr}
+            .bh-snapshot{grid-template-columns:1fr}
+            .bh-chart{gap:5px}
+            .bh-bars{gap:2px}
+            .bh-bar{width:8px}
+          }
+        </style>
+
+        <div class="bh-head">
           <div>
-            <div class="dash-v3-eyebrow">
-              BUSINESS CONTROL CENTER
-            </div>
-
-            <h1>Executive Dashboard</h1>
-
-            <p>
-              Pantau kondisi keuangan, sales, customer,
-              produk dan peluang bisnis dari satu tempat.
-            </p>
+            <div class="bh-head-kicker">Executive Control Center</div>
+            <h1>Business Dashboard</h1>
+            <p>Ringkasan kondisi bisnis, performa dan tindakan yang perlu dilakukan.</p>
           </div>
 
-          <div class="dash-v3-controls">
-            <select id="dash-v3-period">
-              <option value="7">7 Hari</option>
-              <option value="30" selected>30 Hari</option>
-              <option value="90">90 Hari</option>
-              <option value="365">1 Tahun</option>
+          <div class="bh-controls">
+            <select class="bh-control" id="bh-period">
+              <option value="7">7 hari</option>
+              <option value="30">30 hari</option>
+              <option value="90">90 hari</option>
+              <option value="365">1 tahun</option>
             </select>
-
-            <button id="dash-v3-refresh">
-              ↻ Refresh
-            </button>
+            <button class="bh-btn" id="bh-refresh">↻ Refresh</button>
           </div>
         </div>
 
-        <div class="dash-v3-kpis">
-
-          <div class="dash-v3-kpi">
-            <div class="dash-v3-kpi-top">
-              <span>Revenue</span>
-              <b>↗</b>
-            </div>
-
-            <strong>${compact(revenue)}</strong>
-
-            <small>
-              ${tx.filter(t =>
-                String(t.type).toLowerCase() === "income"
-              ).length}
-              transaksi pemasukan
-            </small>
+        <div class="bh-kpis">
+          <div class="bh-kpi">
+            <div class="bh-kpi-label">Revenue</div>
+            <div class="bh-kpi-value">${compact(revenue)}</div>
+            <div class="bh-kpi-sub">Total pemasukan periode</div>
           </div>
 
-          <div class="dash-v3-kpi">
-            <div class="dash-v3-kpi-top">
-              <span>Expenses</span>
-              <b>↘</b>
-            </div>
-
-            <strong>${compact(expenses)}</strong>
-
-            <small>
-              ${expenseRatio}% dari revenue
-            </small>
+          <div class="bh-kpi">
+            <div class="bh-kpi-label">Expenses</div>
+            <div class="bh-kpi-value">${compact(expenses)}</div>
+            <div class="bh-kpi-sub">Total pengeluaran periode</div>
           </div>
 
-          <div class="dash-v3-kpi">
-            <div class="dash-v3-kpi-top">
-              <span>Net Profit</span>
-              <b>${profit >= 0 ? "✓" : "!"}</b>
-            </div>
-
-            <strong>${compact(profit)}</strong>
-
-            <small>
-              Margin ${profitMargin}%
-            </small>
+          <div class="bh-kpi">
+            <div class="bh-kpi-label">Net Profit</div>
+            <div class="bh-kpi-value">${compact(profit)}</div>
+            <div class="bh-kpi-sub">Margin ${margin.toFixed(1)}%</div>
           </div>
 
-          <div class="dash-v3-kpi">
-            <div class="dash-v3-kpi-top">
-              <span>Sales</span>
-              <b>★</b>
-            </div>
-
-            <strong>${compact(salesRevenue)}</strong>
-
-            <small>
-              ${completedSales.length} completed sales
-            </small>
+          <div class="bh-kpi">
+            <div class="bh-kpi-label">Sales</div>
+            <div class="bh-kpi-value">${compact(salesRevenue)}</div>
+            <div class="bh-kpi-sub">${periodSales.length} transaksi penjualan</div>
           </div>
-
         </div>
 
-        <div class="dash-v3-main-grid">
+        <div class="bh-layout">
 
-          <section class="dash-v3-card dash-v3-chart-card">
+          <div>
 
-            <div class="dash-v3-card-head">
-              <div>
-                <h2>Financial Trend</h2>
-                <p>Revenue dan expense 7 hari terakhir</p>
+            <section class="bh-card">
+              <div class="bh-card-head">
+                <div>
+                  <h2>Financial Trend</h2>
+                  <p>Revenue dan expense 7 hari terakhir</p>
+                </div>
+
+                <div class="bh-legend">
+                  <span><i class="bh-dot bh-rev"></i>Revenue</span>
+                  <span><i class="bh-dot bh-exp"></i>Expense</span>
+                </div>
               </div>
 
-              <button class="dash-v3-link" data-dash-v3-page="cashflow">
-                Detail →
-              </button>
-            </div>
+              <div class="bh-chart">
+                ${chartBars.map(day => `
+                  <div class="bh-day">
+                    <div class="bh-bars">
+                      <div
+                        class="bh-bar bh-rev"
+                        title="Revenue: ${money(day.revenue)}"
+                        style="height:${Math.max(3, (day.revenue / maxChart) * 180)}px">
+                      </div>
 
-            <div class="dash-v3-chart">
-
-              ${trend.map(item => `
-                <div class="dash-v3-chart-day">
-
-                  <div class="dash-v3-bars">
-
-                    <div
-                      class="dash-v3-bar revenue"
-                      style="height:${Math.max(
-                        item.revenue > 0 ? 8 : 2,
-                        (item.revenue / maxTrend) * 150
-                      )}px">
+                      <div
+                        class="bh-bar bh-exp"
+                        title="Expense: ${money(day.expense)}"
+                        style="height:${Math.max(3, (day.expense / maxChart) * 180)}px">
+                      </div>
                     </div>
-
-                    <div
-                      class="dash-v3-bar expense"
-                      style="height:${Math.max(
-                        item.expense > 0 ? 8 : 2,
-                        (item.expense / maxTrend) * 150
-                      )}px">
-                    </div>
-
+                    <div class="bh-day-label">${esc(day.label)}</div>
                   </div>
-
-                  <span>${esc(item.label)}</span>
-                </div>
-              `).join("")}
-
-            </div>
-
-            <div class="dash-v3-legend">
-              <span><i class="rev"></i> Revenue</span>
-              <span><i class="exp"></i> Expense</span>
-            </div>
-
-          </section>
-
-          <section class="dash-v3-card">
-
-            <div class="dash-v3-card-head">
-              <div>
-                <h2>Opportunity Center</h2>
-                <p>Prioritas yang perlu diperhatikan</p>
+                `).join("")}
               </div>
-            </div>
+            </section>
 
-            <div class="dash-v3-opportunities">
+            <div class="bh-two">
 
-              ${opportunities.slice(0, 4).map(op => `
-                <div class="dash-v3-op ${op.level}">
-
-                  <div class="dash-v3-op-icon">
-                    ${
-                      op.level === "critical"
-                        ? "!"
-                        : op.level === "warning"
-                          ? "!"
-                          : "✓"
-                    }
+              <section class="bh-card">
+                <div class="bh-card-head">
+                  <div>
+                    <h2>Top Products</h2>
+                    <p>Produk berdasarkan revenue</p>
                   </div>
-
-                  <div class="dash-v3-op-body">
-                    <strong>${esc(op.title)}</strong>
-                    <p>${esc(op.text)}</p>
-
-                    <button
-                      data-dash-v3-page="${esc(op.action)}">
-                      ${esc(op.button)} →
-                    </button>
-                  </div>
-
+                  <button class="bh-link" data-bh-page="products">View →</button>
                 </div>
-              `).join("")}
-
-            </div>
-
-          </section>
-
-        </div>
-
-        <div class="dash-v3-two-grid">
-
-          <section class="dash-v3-card">
-
-            <div class="dash-v3-card-head">
-              <div>
-                <h2>Business Performance</h2>
-                <p>Indikator utama bisnis</p>
-              </div>
-            </div>
-
-            <div class="dash-v3-performance">
-
-              <div>
-                <span>Sales Target</span>
-                <strong>${targetProgress}%</strong>
-
-                <div class="dash-v3-progress">
-                  <i style="width:${targetProgress}%"></i>
-                </div>
-
-                <small>
-                  ${compact(revenue)}
-                  / ${compact(revenueTarget)}
-                </small>
-              </div>
-
-              <div>
-                <span>Profit Margin</span>
-                <strong>${profitMargin}%</strong>
-
-                <div class="dash-v3-progress">
-                  <i style="width:${Math.max(
-                    0,
-                    Math.min(100, profitMargin)
-                  )}%"></i>
-                </div>
-
-                <small>
-                  ${profit >= 0 ? "Profit positif" : "Perlu perhatian"}
-                </small>
-              </div>
-
-              <div>
-                <span>Expense Control</span>
-                <strong>${Math.max(
-                  0,
-                  100 - expenseRatio
-                )}%</strong>
-
-                <div class="dash-v3-progress">
-                  <i style="width:${Math.max(
-                    0,
-                    Math.min(100, 100 - expenseRatio)
-                  )}%"></i>
-                </div>
-
-                <small>
-                  Expense ratio ${expenseRatio}%
-                </small>
-              </div>
-
-            </div>
-
-          </section>
-
-          <section class="dash-v3-card">
-
-            <div class="dash-v3-card-head">
-              <div>
-                <h2>Operational Snapshot</h2>
-                <p>Status operasional bisnis</p>
-              </div>
-            </div>
-
-            <div class="dash-v3-snapshot">
-
-              <button data-dash-v3-page="customers">
-                <span>Customers</span>
-                <strong>${activeCustomers}</strong>
-              </button>
-
-              <button data-dash-v3-page="products">
-                <span>Products</span>
-                <strong>${products.length}</strong>
-              </button>
-
-              <button data-dash-v3-page="products">
-                <span>Low Stock</span>
-                <strong>${lowStock.length}</strong>
-              </button>
-
-              <button data-dash-v3-page="products">
-                <span>Inventory Value</span>
-                <strong>${compact(inventoryValue)}</strong>
-              </button>
-
-            </div>
-
-          </section>
-
-        </div>
-
-        <div class="dash-v3-two-grid">
-
-          <section class="dash-v3-card">
-
-            <div class="dash-v3-card-head">
-              <div>
-                <h2>Top Products</h2>
-                <p>Produk berdasarkan revenue</p>
-              </div>
-
-              <button
-                class="dash-v3-link"
-                data-dash-v3-page="products">
-                Products →
-              </button>
-            </div>
-
-            <div class="dash-v3-ranking">
-
-              ${
-                topProducts.length
-                  ? topProducts.map((item, i) => `
-                    <div class="dash-v3-rank">
-                      <b>${i + 1}</b>
-                      <span>${esc(item[0])}</span>
-                      <strong>${compact(item[1])}</strong>
-                    </div>
-                  `).join("")
-                  : `
-                    <div class="dash-v3-empty">
-                      Belum ada data sales.
-                    </div>
-                  `
-              }
-
-            </div>
-
-          </section>
-
-          <section class="dash-v3-card">
-
-            <div class="dash-v3-card-head">
-              <div>
-                <h2>Top Customers</h2>
-                <p>Customer berdasarkan revenue</p>
-              </div>
-
-              <button
-                class="dash-v3-link"
-                data-dash-v3-page="customers">
-                Customers →
-              </button>
-            </div>
-
-            <div class="dash-v3-ranking">
-
-              ${
-                topCustomers.length
-                  ? topCustomers.map((item, i) => `
-                    <div class="dash-v3-rank">
-                      <b>${i + 1}</b>
-                      <span>${esc(item[0])}</span>
-                      <strong>${compact(item[1])}</strong>
-                    </div>
-                  `).join("")
-                  : `
-                    <div class="dash-v3-empty">
-                      Belum ada data customer.
-                    </div>
-                  `
-              }
-
-            </div>
-
-          </section>
-
-        </div>
-
-        <section class="dash-v3-card">
-
-          <div class="dash-v3-card-head">
-            <div>
-              <h2>Recent Activity</h2>
-              <p>Aktivitas bisnis terbaru</p>
-            </div>
-
-            <button
-              class="dash-v3-link"
-              data-dash-v3-page="finance">
-              Finance →
-            </button>
-          </div>
-
-          <div class="dash-v3-table-wrap">
-
-            <table class="dash-v3-table">
-
-              <thead>
-                <tr>
-                  <th>Tanggal</th>
-                  <th>Aktivitas</th>
-                  <th>Tipe</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-
-              <tbody>
 
                 ${
-                  recent.length
-                    ? recent.map(item => `
-                      <tr>
-                        <td>${esc(item.date || "-")}</td>
-
-                        <td>
-                          <strong>${esc(item.title)}</strong>
-                        </td>
-
-                        <td>
-                          <span class="dash-v3-type">
-                            ${esc(item.type)}
-                          </span>
-                        </td>
-
-                        <td>
-                          <strong>${money(item.amount)}</strong>
-                        </td>
-                      </tr>
+                  topProducts.length
+                    ? topProducts.map((p, i) => `
+                      <div class="bh-row">
+                        <div class="bh-row-main">
+                          <strong>${i + 1}. ${esc(p.name)}</strong>
+                          <span>${p.qty} unit terjual</span>
+                        </div>
+                        <div class="bh-row-value">${compact(p.revenue)}</div>
+                      </div>
                     `).join("")
-                    : `
-                      <tr>
-                        <td colspan="4">
-                          Belum ada aktivitas.
-                        </td>
-                      </tr>
-                    `
+                    : `<div class="bh-empty">Belum ada data penjualan.</div>`
                 }
+              </section>
 
-              </tbody>
+              <section class="bh-card">
+                <div class="bh-card-head">
+                  <div>
+                    <h2>Top Customers</h2>
+                    <p>Customer berdasarkan revenue</p>
+                  </div>
+                  <button class="bh-link" data-bh-page="customers">View →</button>
+                </div>
 
-            </table>
+                ${
+                  topCustomers.length
+                    ? topCustomers.map((c, i) => `
+                      <div class="bh-row">
+                        <div class="bh-row-main">
+                          <strong>${i + 1}. ${esc(c.name)}</strong>
+                          <span>${c.orders} order</span>
+                        </div>
+                        <div class="bh-row-value">${compact(c.revenue)}</div>
+                      </div>
+                    `).join("")
+                    : `<div class="bh-empty">Belum ada data customer.</div>`
+                }
+              </section>
+
+            </div>
+
+            <section class="bh-card">
+              <div class="bh-card-head">
+                <div>
+                  <h2>Recent Activity</h2>
+                  <p>Aktivitas keuangan dan penjualan terbaru</p>
+                </div>
+                <button class="bh-link" data-bh-page="finance">View Finance →</button>
+              </div>
+
+              ${
+                recent.length
+                  ? `<div style="overflow:auto">
+                    <table class="bh-table">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Activity</th>
+                          <th>Type</th>
+                          <th>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${recent.map(r => `
+                          <tr>
+                            <td>${esc(r.date)}</td>
+                            <td><strong>${esc(r.description)}</strong></td>
+                            <td class="bh-type">${esc(r.type)}</td>
+                            <td>${money(r.amount)}</td>
+                          </tr>
+                        `).join("")}
+                      </tbody>
+                    </table>
+                  </div>`
+                  : `<div class="bh-empty">Belum ada aktivitas.</div>`
+              }
+            </section>
 
           </div>
 
-        </section>
+          <div>
 
-        <section class="dash-v3-card">
+            <section class="bh-card">
+              <div class="bh-card-head">
+                <div>
+                  <h2>Opportunity Center</h2>
+                  <p>Area yang membutuhkan perhatian</p>
+                </div>
+                <button class="bh-link" data-bh-page="opportunities">All →</button>
+              </div>
 
-          <div class="dash-v3-card-head">
+              ${opportunities.map(o => `
+                <div class="bh-op ${o.type}">
+                  <div class="bh-op-icon">${o.icon}</div>
+                  <div>
+                    <strong>${esc(o.title)}</strong>
+                    <p>${esc(o.text)}</p>
+                    <button class="bh-link" data-bh-page="${esc(o.page)}">Take Action →</button>
+                  </div>
+                </div>
+              `).join("")}
+            </section>
+
+            <section class="bh-card">
+              <div class="bh-card-head">
+                <div>
+                  <h2>Performance</h2>
+                  <p>Progress terhadap target revenue</p>
+                </div>
+              </div>
+
+              <div style="font-size:30px;font-weight:800">
+                ${achievement.toFixed(0)}%
+              </div>
+
+              <div class="bh-progress">
+                <i style="width:${Math.min(100, Math.max(0, achievement))}%"></i>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;margin-top:9px;font-size:11px;color:#98a2b3">
+                <span>${compact(revenue)}</span>
+                <span>Target ${compact(revenueTarget)}</span>
+              </div>
+            </section>
+
+            <section class="bh-card">
+              <div class="bh-card-head">
+                <div>
+                  <h2>Operational Snapshot</h2>
+                  <p>Status bisnis saat ini</p>
+                </div>
+              </div>
+
+              <div class="bh-snapshot">
+                <div class="bh-mini">
+                  <span>Products</span>
+                  <strong>${products.length}</strong>
+                </div>
+
+                <div class="bh-mini">
+                  <span>Low Stock</span>
+                  <strong>${lowStock.length}</strong>
+                </div>
+
+                <div class="bh-mini">
+                  <span>Customers</span>
+                  <strong>${customers.length}</strong>
+                </div>
+              </div>
+
+              <div style="margin-top:14px;padding-top:14px;border-top:1px solid #eef0f4">
+                <span style="font-size:11px;color:#98a2b3">Inventory Value</span>
+                <strong style="display:block;margin-top:4px">${compact(inventoryValue)}</strong>
+              </div>
+            </section>
+
+          </div>
+        </div>
+
+        <section class="bh-card">
+          <div class="bh-card-head">
             <div>
               <h2>Quick Actions</h2>
-              <p>Akses cepat ke pekerjaan utama</p>
+              <p>Akses cepat ke aktivitas utama bisnis</p>
             </div>
           </div>
 
-          <div class="dash-v3-actions">
-
-            <button data-dash-v3-page="finance">
-              <b>＋</b>
-              <span>Transaction</span>
-            </button>
-
-            <button data-dash-v3-page="sales">
-              <b>＋</b>
-              <span>Sale</span>
-            </button>
-
-            <button data-dash-v3-page="customers">
-              <b>＋</b>
-              <span>Customer</span>
-            </button>
-
-            <button data-dash-v3-page="products">
-              <b>＋</b>
-              <span>Product</span>
-            </button>
-
-            <button data-dash-v3-page="expenses">
-              <b>↘</b>
-              <span>Expenses</span>
-            </button>
-
-            <button data-dash-v3-page="cashflow">
-              <b>↔</b>
-              <span>Cash Flow</span>
-            </button>
-
+          <div class="bh-actions">
+            <button class="bh-action" data-bh-page="finance">＋ Transaction</button>
+            <button class="bh-action" data-bh-page="sales">＋ New Sale</button>
+            <button class="bh-action" data-bh-page="customers">＋ Customer</button>
+            <button class="bh-action" data-bh-page="products">＋ Product / Stock</button>
           </div>
-
         </section>
 
       </div>
-
-      <style>
-
-        .dash-v3 {
-          padding: 4px 0 35px;
-          color: #172033;
-        }
-
-        .dash-v3-header {
-          display:flex;
-          align-items:flex-end;
-          justify-content:space-between;
-          gap:20px;
-          margin-bottom:24px;
-        }
-
-        .dash-v3-eyebrow {
-          font-size:10px;
-          font-weight:800;
-          letter-spacing:1.2px;
-          color:#667085;
-          margin-bottom:6px;
-        }
-
-        .dash-v3-header h1 {
-          margin:0;
-          font-size:30px;
-          line-height:1.15;
-          letter-spacing:-.7px;
-          color:#101828;
-        }
-
-        .dash-v3-header p {
-          margin:8px 0 0;
-          color:#667085;
-          font-size:13px;
-          max-width:650px;
-        }
-
-        .dash-v3-controls {
-          display:flex;
-          gap:8px;
-          flex-shrink:0;
-        }
-
-        .dash-v3-controls select,
-        .dash-v3-controls button {
-          height:40px;
-          border:1px solid #d0d5dd;
-          border-radius:10px;
-          background:#fff;
-          padding:0 13px;
-          color:#344054;
-          font-weight:650;
-          font-size:12px;
-          cursor:pointer;
-        }
-
-        .dash-v3-controls button:hover,
-        .dash-v3-controls select:hover {
-          border-color:#98a2b3;
-          background:#f9fafb;
-        }
-
-        .dash-v3-kpis {
-          display:grid;
-          grid-template-columns:repeat(4,minmax(0,1fr));
-          gap:14px;
-          margin-bottom:18px;
-        }
-
-        .dash-v3-kpi {
-          background:#fff;
-          border:1px solid #e4e7ec;
-          border-radius:15px;
-          padding:18px;
-          box-shadow:0 3px 12px rgba(16,24,40,.045);
-          min-height:125px;
-        }
-
-        .dash-v3-kpi-top {
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          color:#667085;
-          font-size:11px;
-          font-weight:750;
-          text-transform:uppercase;
-          letter-spacing:.3px;
-        }
-
-        .dash-v3-kpi-top b {
-          width:27px;
-          height:27px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          border-radius:8px;
-          background:#f2f4f7;
-          color:#344054;
-          font-size:12px;
-        }
-
-        .dash-v3-kpi strong {
-          display:block;
-          margin-top:12px;
-          font-size:24px;
-          letter-spacing:-.5px;
-          color:#101828;
-        }
-
-        .dash-v3-kpi small {
-          display:block;
-          margin-top:7px;
-          color:#98a2b3;
-          font-size:10px;
-        }
-
-        .dash-v3-main-grid {
-          display:grid;
-          grid-template-columns:minmax(0,1.55fr) minmax(320px,.9fr);
-          gap:16px;
-          margin-bottom:16px;
-        }
-
-        .dash-v3-two-grid {
-          display:grid;
-          grid-template-columns:repeat(2,minmax(0,1fr));
-          gap:16px;
-          margin-bottom:16px;
-        }
-
-        .dash-v3-card {
-          background:#fff;
-          border:1px solid #e4e7ec;
-          border-radius:15px;
-          padding:19px;
-          box-shadow:0 3px 12px rgba(16,24,40,.04);
-          margin-bottom:16px;
-        }
-
-        .dash-v3-main-grid .dash-v3-card,
-        .dash-v3-two-grid .dash-v3-card {
-          margin-bottom:0;
-        }
-
-        .dash-v3-card-head {
-          display:flex;
-          align-items:flex-start;
-          justify-content:space-between;
-          gap:12px;
-          margin-bottom:17px;
-        }
-
-        .dash-v3-card-head h2 {
-          margin:0;
-          font-size:15px;
-          color:#101828;
-        }
-
-        .dash-v3-card-head p {
-          margin:5px 0 0;
-          font-size:11px;
-          color:#667085;
-        }
-
-        .dash-v3-link {
-          border:0;
-          background:transparent;
-          color:#344054;
-          font-size:11px;
-          font-weight:750;
-          cursor:pointer;
-          padding:3px;
-        }
-
-        .dash-v3-link:hover {
-          text-decoration:underline;
-        }
-
-        .dash-v3-chart {
-          height:190px;
-          display:flex;
-          align-items:flex-end;
-          justify-content:space-around;
-          gap:10px;
-          padding:5px 5px 0;
-          border-bottom:1px solid #eaecf0;
-        }
-
-        .dash-v3-chart-day {
-          flex:1;
-          height:100%;
-          display:flex;
-          flex-direction:column;
-          justify-content:flex-end;
-          align-items:center;
-          gap:8px;
-          min-width:0;
-        }
-
-        .dash-v3-bars {
-          height:160px;
-          display:flex;
-          align-items:flex-end;
-          justify-content:center;
-          gap:4px;
-        }
-
-        .dash-v3-bar {
-          width:10px;
-          min-height:2px;
-          border-radius:4px 4px 0 0;
-        }
-
-        .dash-v3-bar.revenue {
-          background:#344054;
-        }
-
-        .dash-v3-bar.expense {
-          background:#d0d5dd;
-        }
-
-        .dash-v3-chart-day > span {
-          font-size:9px;
-          color:#98a2b3;
-          white-space:nowrap;
-        }
-
-        .dash-v3-legend {
-          display:flex;
-          gap:18px;
-          margin-top:12px;
-          font-size:10px;
-          color:#667085;
-        }
-
-        .dash-v3-legend i {
-          display:inline-block;
-          width:7px;
-          height:7px;
-          border-radius:50%;
-          margin-right:5px;
-        }
-
-        .dash-v3-legend .rev {
-          background:#344054;
-        }
-
-        .dash-v3-legend .exp {
-          background:#d0d5dd;
-        }
-
-        .dash-v3-op {
-          display:flex;
-          gap:11px;
-          padding:12px;
-          border:1px solid #eaecf0;
-          border-radius:11px;
-          margin-bottom:9px;
-          background:#fcfcfd;
-        }
-
-        .dash-v3-op:last-child {
-          margin-bottom:0;
-        }
-
-        .dash-v3-op-icon {
-          flex:0 0 27px;
-          width:27px;
-          height:27px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          border-radius:8px;
-          background:#f2f4f7;
-          color:#344054;
-          font-weight:800;
-          font-size:11px;
-        }
-
-        .dash-v3-op.critical .dash-v3-op-icon {
-          background:#fee4e2;
-          color:#b42318;
-        }
-
-        .dash-v3-op.warning .dash-v3-op-icon {
-          background:#fef0c7;
-          color:#b54708;
-        }
-
-        .dash-v3-op.positive .dash-v3-op-icon {
-          background:#dcfae6;
-          color:#027a48;
-        }
-
-        .dash-v3-op-body {
-          min-width:0;
-        }
-
-        .dash-v3-op-body strong {
-          display:block;
-          color:#101828;
-          font-size:12px;
-        }
-
-        .dash-v3-op-body p {
-          margin:4px 0 7px;
-          color:#667085;
-          font-size:10px;
-          line-height:1.5;
-        }
-
-        .dash-v3-op-body button {
-          padding:0;
-          border:0;
-          background:none;
-          color:#344054;
-          font-size:10px;
-          font-weight:750;
-          cursor:pointer;
-        }
-
-        .dash-v3-performance {
-          display:grid;
-          grid-template-columns:repeat(3,1fr);
-          gap:18px;
-        }
-
-        .dash-v3-performance span {
-          display:block;
-          font-size:10px;
-          font-weight:650;
-          color:#667085;
-        }
-
-        .dash-v3-performance strong {
-          display:block;
-          margin-top:7px;
-          color:#101828;
-          font-size:18px;
-        }
-
-        .dash-v3-performance small {
-          display:block;
-          margin-top:6px;
-          color:#98a2b3;
-          font-size:9px;
-        }
-
-        .dash-v3-progress {
-          height:6px;
-          margin-top:9px;
-          overflow:hidden;
-          border-radius:99px;
-          background:#eaecf0;
-        }
-
-        .dash-v3-progress i {
-          display:block;
-          height:100%;
-          border-radius:99px;
-          background:#344054;
-        }
-
-        .dash-v3-snapshot {
-          display:grid;
-          grid-template-columns:repeat(2,1fr);
-          gap:9px;
-        }
-
-        .dash-v3-snapshot button {
-          text-align:left;
-          padding:13px;
-          border:1px solid #eaecf0;
-          border-radius:10px;
-          background:#fcfcfd;
-          cursor:pointer;
-        }
-
-        .dash-v3-snapshot button:hover {
-          background:#f9fafb;
-          border-color:#d0d5dd;
-        }
-
-        .dash-v3-snapshot span {
-          display:block;
-          color:#667085;
-          font-size:9px;
-          font-weight:650;
-        }
-
-        .dash-v3-snapshot strong {
-          display:block;
-          margin-top:6px;
-          color:#101828;
-          font-size:15px;
-        }
-
-        .dash-v3-ranking {
-          display:flex;
-          flex-direction:column;
-          gap:8px;
-        }
-
-        .dash-v3-rank {
-          display:grid;
-          grid-template-columns:26px minmax(0,1fr) auto;
-          align-items:center;
-          gap:9px;
-          padding:10px;
-          border:1px solid #f0f2f5;
-          border-radius:9px;
-        }
-
-        .dash-v3-rank > b {
-          width:24px;
-          height:24px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          border-radius:7px;
-          background:#f2f4f7;
-          color:#475467;
-          font-size:10px;
-        }
-
-        .dash-v3-rank span {
-          min-width:0;
-          overflow:hidden;
-          text-overflow:ellipsis;
-          white-space:nowrap;
-          color:#344054;
-          font-size:11px;
-          font-weight:600;
-        }
-
-        .dash-v3-rank strong {
-          color:#101828;
-          font-size:11px;
-        }
-
-        .dash-v3-empty {
-          padding:25px;
-          text-align:center;
-          color:#98a2b3;
-          font-size:11px;
-        }
-
-        .dash-v3-table-wrap {
-          overflow-x:auto;
-        }
-
-        .dash-v3-table {
-          width:100%;
-          border-collapse:collapse;
-          min-width:620px;
-        }
-
-        .dash-v3-table th {
-          padding:10px;
-          text-align:left;
-          background:#f8fafc;
-          border-bottom:1px solid #eaecf0;
-          color:#667085;
-          font-size:9px;
-          text-transform:uppercase;
-          letter-spacing:.4px;
-        }
-
-        .dash-v3-table td {
-          padding:12px 10px;
-          border-bottom:1px solid #f2f4f7;
-          color:#475467;
-          font-size:11px;
-        }
-
-        .dash-v3-table td strong {
-          color:#101828;
-        }
-
-        .dash-v3-type {
-          display:inline-block;
-          padding:4px 7px;
-          border-radius:6px;
-          background:#f2f4f7;
-          color:#475467;
-          font-size:9px;
-          font-weight:650;
-        }
-
-        .dash-v3-actions {
-          display:grid;
-          grid-template-columns:repeat(6,1fr);
-          gap:10px;
-        }
-
-        .dash-v3-actions button {
-          min-height:70px;
-          display:flex;
-          flex-direction:column;
-          align-items:center;
-          justify-content:center;
-          gap:7px;
-          border:1px solid #e4e7ec;
-          border-radius:11px;
-          background:#fff;
-          color:#344054;
-          cursor:pointer;
-          font-size:10px;
-          font-weight:700;
-        }
-
-        .dash-v3-actions button:hover {
-          transform:translateY(-1px);
-          background:#f9fafb;
-          border-color:#98a2b3;
-        }
-
-        .dash-v3-actions b {
-          font-size:18px;
-          font-weight:500;
-        }
-
-        @media(max-width:1050px) {
-          .dash-v3-kpis {
-            grid-template-columns:repeat(2,1fr);
-          }
-
-          .dash-v3-main-grid {
-            grid-template-columns:1fr;
-          }
-
-          .dash-v3-actions {
-            grid-template-columns:repeat(3,1fr);
-          }
-        }
-
-        @media(max-width:700px) {
-          .dash-v3-header {
-            align-items:stretch;
-            flex-direction:column;
-          }
-
-          .dash-v3-controls {
-            width:100%;
-          }
-
-          .dash-v3-controls select,
-          .dash-v3-controls button {
-            flex:1;
-          }
-
-          .dash-v3-kpis,
-          .dash-v3-two-grid {
-            grid-template-columns:1fr;
-          }
-
-          .dash-v3-performance {
-            grid-template-columns:1fr;
-            gap:15px;
-          }
-
-          .dash-v3-actions {
-            grid-template-columns:repeat(2,1fr);
-          }
-        }
-
-        @media(max-width:430px) {
-          .dash-v3-header h1 {
-            font-size:24px;
-          }
-
-          .dash-v3-card {
-            padding:15px;
-            border-radius:13px;
-          }
-
-          .dash-v3-chart {
-            gap:3px;
-          }
-
-          .dash-v3-bar {
-            width:7px;
-          }
-        }
-
-      </style>
     `;
 
-    const periodSelect =
-      document.getElementById("dash-v3-period");
-
-    if (periodSelect) {
-      periodSelect.value = String(currentPeriod);
-
-      periodSelect.addEventListener("change", function () {
+    const period = document.getElementById("bh-period");
+    if (period) {
+      period.value = String(currentPeriod);
+      period.addEventListener("change", function () {
         currentPeriod = Number(this.value) || 30;
         renderDashboard();
       });
     }
 
-    const refresh =
-      document.getElementById("dash-v3-refresh");
+    document.getElementById("bh-refresh")?.addEventListener(
+      "click",
+      renderDashboard
+    );
 
-    if (refresh) {
-      refresh.addEventListener("click", function () {
-        renderDashboard();
+    content.querySelectorAll("[data-bh-page]").forEach(button => {
+      button.addEventListener("click", function () {
+        navigate(this.dataset.bhPage);
       });
-    }
-
-    content
-      .querySelectorAll("[data-dash-v3-page]")
-      .forEach(button => {
-        button.addEventListener("click", function () {
-          navigate(button.dataset.dashV3Page);
-        });
-      });
+    });
   }
 
+  /*
+   * Expose BOTH names.
+   * Router lama menggunakan renderDashboard.
+   * Handler sebelumnya menggunakan renderLiveDashboard.
+   */
+  window.renderDashboard = renderDashboard;
   window.renderLiveDashboard = renderDashboard;
 
-  /*
-   * Dashboard navigation
-   */
-  document.addEventListener("click", function (event) {
-    const button =
-      event.target.closest('[data-page="dashboard"]');
-
-    if (!button) return;
-
-    setTimeout(function () {
-      renderDashboard();
-    }, 80);
-  });
-
+  renderDashboard();
 })();
 
 /* =========================================================
