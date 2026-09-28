@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Business Finance & Operations Dashboard">
-  <title>Business Hub — Executive Dashboard</title>
+  <title>Portofolio Wandi — Executive Dashboard</title>
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -18,7 +18,7 @@
       <div class="brand">
         <div class="brand-mark">B</div>
         <div>
-          <strong>Business Hub</strong>
+          <strong>Portofolio Wandi</strong>
           <span>Analytics Platform</span>
         </div>
       </div>
@@ -118,13 +118,13 @@
       </nav>
 
       <div class="sidebar-bottom">
-        <button class="nav-item">
+        <button class="nav-item" data-page="settings">
           <span>⚙</span>
           Settings
         </button>
 
-        <div class="profile-mini">
-          <div class="avatar">BH</div>
+        <div class="profile-mini" id="sidebarProfile">
+          <div class="avatar profile-avatar" id="sideProfileAvatar" title="Ubah foto profil">BH</div>
           <div>
             <strong>Business Admin</strong>
             <span>Administrator</span>
@@ -144,7 +144,7 @@
         <button class="mobile-menu" id="mobileMenu">☰</button>
 
         <div class="breadcrumb">
-          <span>Business Hub</span>
+          <span>Portofolio Wandi</span>
           <b>/</b>
           <strong>Dashboard</strong>
         </div>
@@ -158,8 +158,8 @@
             <i></i>
           </button>
 
-          <div class="top-profile">
-            <div class="avatar">BH</div>
+          <div class="top-profile" id="profileAvatarTrigger" title="Ubah foto profil">
+            <div class="avatar profile-avatar" id="topProfileAvatar">BH</div>
             <div class="top-profile-text">
               <strong>Business Admin</strong>
               <span>Administrator</span>
@@ -168,11 +168,20 @@
 
         </div>
 
+      <input
+        type="file"
+        id="profilePhotoInput"
+        accept="image/*"
+        style="display:none"
+      />
       </header>
 
 
       <!-- CONTENT -->
       <section class="content">
+
+      <!-- DASHBOARD EXTRA WIDGETS -->
+      <div id="dashboardExtras" class="dashboard-extras"></div>
 
         <!-- PAGE HEADER -->
         <div class="page-header">

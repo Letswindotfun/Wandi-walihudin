@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Realm of Legends — Game UI Demo</title>
+<style>
+:root{--bg:#090d18;--panel:#111a2b;--line:#293650;--text:#edf2ff;--muted:#91a0ba;--blue:#6e91ff;--gold:#e4bd70;--green:#5be0a5;--red:#fa7183}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% 0,#26385b 0,transparent 42%),var(--bg);color:var(--text);font:14px system-ui,sans-serif;min-height:100vh}
+button{font:inherit;cursor:pointer;color:inherit}button:hover{filter:brightness(1.18)}.app{max-width:1350px;margin:auto;padding:20px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{font-size:20px;font-weight:900;letter-spacing:1px}.brand span{color:var(--gold)}.subtitle{color:var(--muted);font-size:11px;margin-top:3px}
+.header-right{display:flex;align-items:center;gap:8px}.pill{border:1px solid #665438;color:var(--gold);background:#211d18;padding:7px 10px;border-radius:20px;font-size:11px}
+.layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,1fr);gap:16px;margin-top:18px}
+.panel{background:linear-gradient(145deg,#151f32,#0e1524);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.panel-head{display:flex;justify-content:space-between;align-items:center;padding:15px 17px;border-bottom:1px solid var(--line);gap:10px}.panel-head h2{font-size:13px;letter-spacing:1px;margin:0}.muted{color:var(--muted);font-size:11px}
+.world{position:relative;min-height:400px;overflow:hidden;background:linear-gradient(180deg,#182b4b 0%,#17243c 43%,#182333 70%,#0c1720 100%);display:flex;align-items:center;justify-content:center}
+.moon{position:absolute;width:115px;height:115px;top:45px;right:15%;border-radius:50%;background:radial-gradient(circle at 35% 35%,#f7dfab,#8b8b9d 65%,#343d5c);box-shadow:0 0 55px #e1d1a533}
+.mountain{position:absolute;bottom:0;width:0;height:0;border-left:180px solid transparent;border-right:180px solid transparent;border-bottom:200px solid #182c3a;filter:drop-shadow(0 0 8px #0a111b)}
+.m1{left:-100px}.m2{right:-100px;border-bottom-color:#243343;border-left-width:230px;border-right-width:230px}
+.ground{position:absolute;bottom:0;left:0;right:0;height:90px;background:linear-gradient(180deg,#172c32,#0b151d);border-top:1px solid #44505b}
+.hero{position:relative;z-index:1;text-align:center;margin-top:60px}.rune{font-size:80px;filter:drop-shadow(0 0 20px #8baaff88);line-height:1.2}.hero h1{font-size:25px;margin:8px 0 5px;text-shadow:0 2px 15px #000}.hero p{font-size:11px;color:#b7c8e5;margin:0}
+.world-label{position:absolute;bottom:15px;left:16px;color:#c3d3e8;font-size:11px;letter-spacing:1px}
+.world-level{position:absolute;top:15px;left:15px;background:#0b1224bb;border:1px solid #415273;padding:8px 10px;border-radius:8px;font-size:11px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:15px}.stat{background:#0c1423;border:1px solid var(--line);border-radius:10px;padding:12px}.stat-title{display:flex;justify-content:space-between;font-size:11px;margin-bottom:8px}.track{height:8px;background:#29354a;border-radius:20px;overflow:hidden}.fill{height:100%;border-radius:20px;transition:width .3s}.hp{background:linear-gradient(90deg,#c84f67,#ff7b83)}.mp{background:linear-gradient(90deg,#466ce1,#83a6ff)}.xp{background:linear-gradient(90deg,#b58942,#f4d68b)}
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.content{padding:15px}
+.tabs{display:flex;gap:6px;padding:12px 14px;border-bottom:1px solid var(--line)}.tab{border:1px solid var(--line);border-radius:8px;background:#0b1322;color:var(--muted);padding:8px 11px;font-size:11px}.tab.active{color:#d9e4ff;border-color:#5778cf;background:#1b2b4a}
+.items{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.item{border:1px solid #36445e;background:#0c1423;border-radius:10px;min-height:82px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:23px}.item small{font-size:10px;color:var(--muted)}.item.equipped{border-color:var(--gold);background:#30281a}
+.row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}.quest-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:#25344d;font-size:17px}.quest-text{flex:1}.quest-text strong{font-size:12px;display:block}.quest-text small{color:var(--muted);font-size:10px}.reward{color:var(--gold);font-size:11px;white-space:nowrap}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.action{padding:10px 13px;border:1px solid #40557a;border-radius:9px;background:#1a2b49;font-size:11px}.primary{background:linear-gradient(135deg,#c6a05b,#efd59b);border-color:#e5c37b;color:#241b10;font-weight:800}.message{min-height:20px;color:var(--green);font-size:11px;margin-top:10px}
+.character-list{display:flex;gap:8px}.character{flex:1;border:1px solid var(--line);background:#0b1322;border-radius:10px;padding:12px 5px;text-align:center}.character.active{border-color:var(--gold);background:#282318}.character div{font-size:25px}.character small{display:block;color:var(--muted);font-size:10px;margin-top:5px}
+footer{text-align:center;color:var(--muted);font-size:10px;padding:22px 0 8px}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.bottom-grid{grid-template-columns:1fr}.world{min-height:340px}}
+@media(max-width:440px){.app{padding:11px}.brand{font-size:17px}.stats{padding:10px;gap:8px}.stat{padding:9px}.world{min-height:300px}.rune{font-size:65px}.hero h1{font-size:21px}.panel-head{padding:12px}.bottom-grid{gap:12px}.items{gap:5px}.item{min-height:72px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div><div class="brand">REALM <span>OF LEGENDS</span></div><div class="subtitle">Fantasy RPG · Interactive UI Concept</div></div><div class="header-right"><span class="pill">✦ DEMO BUILD</span><span class="muted" id="clock">Level 12</span></div></header>
+<div class="layout">
+<section>
+<div class="panel">
+<div class="panel-head"><h2>WORLD EXPLORER</h2><span class="muted">Region 01 · Moonfall</span></div>
+<div class="world"><div class="moon"></div><div class="mountain m1"></div><div class="mountain m2"></div><div class="ground"></div><div class="world-level">✦ LEVEL <span id="level">12</span> · ADVENTURER</div><div class="hero"><div class="rune" id="heroRune">🛡️</div><h1 id="heroName">Alden Stormguard</h1><p id="heroClass">KNIGHT OF THE NORTH</p></div><div class="world-label">⌖ MOONFALL OUTPOST</div></div>
+<div class="stats">
+<div class="stat"><div class="stat-title"><span>♥ Health</span><b id="hpText">820 / 1000</b></div><div class="track"><div class="fill hp" id="hpBar" style="width:82%"></div></div></div>
+<div class="stat"><div class="stat-title"><span>✧ Mana</span><b id="mpText">360 / 500</b></div><div class="track"><div class="fill mp" id="mpBar" style="width:72%"></div></div></div>
+<div class="stat" style="grid-column:1/-1"><div class="stat-title"><span>✦ Experience</span><b id="xpText">64%</b></div><div class="track"><div class="fill xp" id="xpBar" style="width:64%"></div></div></div>
+</div></div>
+<div class="bottom-grid">
+<div class="panel"><div class="panel-head"><h2>CHARACTER</h2><span class="muted">Choose avatar</span></div><div class="content"><div class="character-list">
+<button class="character active" data-char="knight"><div>🛡️</div><small>Knight</small></button>
+<button class="character" data-char="mage"><div>🧙</div><small>Mage</small></button>
+<button class="character" data-char="ranger"><div>🏹</div><small>Ranger</small></button>
+</div><div class="actions"><button class="action" id="rest">✚ Rest & Recover</button></div><div class="message" id="charMessage" aria-live="polite"></div></div></div>
+<div class="panel"><div class="panel-head"><h2>QUICK ACTIONS</h2><span class="muted">Simulation</span></div><div class="content"><div class="actions" style="margin-top:0"><button class="action primary" id="explore">⚔ Explore</button><button class="action" id="potion">🧪 Use Potion</button><button class="action" id="skill">✧ Cast Skill</button></div><div class="message" id="actionMessage" aria-live="polite">Ready for your next adventure.</div></div></div>
+</div>
+</section>
+<aside>
+<div class="panel"><div class="panel-head"><h2>INVENTORY</h2><span class="muted" id="itemCount">4 / 16 slots</span></div><div class="tabs"><button class="tab active" data-tab="all">All Items</button><button class="tab" data-tab="gear">Gear</button><button class="tab" data-tab="consumable">Consumables</button></div><div class="content"><div class="items" id="items"></div><div class="message" id="itemMessage" aria-live="polite">Select an item to view its details.</div></div></div>
+<div class="panel" style="margin-top:16px"><div class="panel-head"><h2>ACTIVE QUESTS</h2><span class="pill">2 AVAILABLE</span></div><div class="content">
+<div class="row"><div class="quest-icon">🐺</div><div class="quest-text"><strong>Wolves at the Gate</strong><small>Defend the Moonfall outpost</small></div><span class="reward">+120 XP</span></div>
+<div class="row"><div class="quest-icon">💎</div><div class="quest-text"><strong>Lost Crystal</strong><small>Find the ancient crystal</small></div><span class="reward">+80 XP</span></div>
+<div class="row"><div class="quest-icon">📜</div><div class="quest-text"><strong>Daily Challenge</strong><small>Explore 3 locations</small></div><span class="reward">+50 XP</span></div>
+<div class="actions"><button class="action primary" id="quest">Track Quest →</button></div><div class="message" id="questMessage" aria-live="polite">No quest selected.</div>
+</div></div>
+<div class="panel" style="margin-top:16px"><div class="panel-head"><h2>PLAYER SUMMARY</h2></div><div class="content">
+<div class="row"><span class="muted">Class</span><b id="summaryClass">Knight</b></div><div class="row"><span class="muted">Gold</span><b style="color:var(--gold)" id="gold">1,250 G</b></div><div class="row"><span class="muted">Potions</span><b id="potions">3</b></div><div class="row"><span class="muted">Locations explored</span><b id="locations">1 / 12</b></div>
+</div></div>
+</aside>
+</div>
+<footer>REALM OF LEGENDS · Portfolio UI concept · Simulated interactions only, no online gameplay</footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const characters={
+knight:{name:"Alden Stormguard",className:"KNIGHT OF THE NORTH",rune:"🛡️",summary:"Knight",hp:820,mp:360},
+mage:{name:"Lyra Moonweaver",className:"ARCANE MAGE",rune:"🧙",summary:"Mage",hp:610,mp:480},
+ranger:{name:"Kael Wildstride",className:"FOREST RANGER",rune:"🏹",summary:"Ranger",hp:720,mp:400}
+};
+let current="knight",hp=820,mp=360,potions=3,locations=1,xp=64,gold=1250,questIndex=0;
+const itemData=[
+{name:"Iron Sword",icon:"⚔️",type:"gear",desc:"A dependable blade for close combat."},
+{name:"Guardian Shield",icon:"🛡️",type:"gear",desc:"A shield forged for frontline defenders."},
+{name:"Health Potion",icon:"🧪",type:"consumable",desc:"Restores health during an adventure."},
+{name:"Moon Crystal",icon:"💎",type:"gear",desc:"A rare crystal found near Moonfall."}
+];
+function setStats(){let c=characters[current];$("hpText").textContent=hp+" / 1000";$("hpBar").style.width=hp/10+"%";$("mpText").textContent=mp+" / 500";$("mpBar").style.width=mp/5+"%";$("xpText").textContent=xp+"%";$("xpBar").style.width=xp+"%";$("potions").textContent=potions;$("gold").textContent=gold.toLocaleString()+" G";$("locations").textContent=locations+" / 12";$("level").textContent=12+Math.floor(xp/100);$("clock").textContent="Level "+(12+Math.floor(xp/100))}
+function show(id,text){$(id).textContent=text}
+function renderItems(filter="all"){$("items").innerHTML="";let list=itemData.filter(x=>filter==="all"||x.type===filter);list.forEach((it,i)=>{let b=document.createElement("button");b.className="item"+(i===0?" equipped":"");b.innerHTML=it.icon+"<small>"+it.name+"</small>";b.onclick=()=>show("itemMessage",it.name+": "+it.desc);$("items").append(b)});$("itemCount").textContent=list.length+" / 16 slots"}
+document.querySelectorAll("[data-char]").forEach(b=>b.onclick=()=>{current=b.dataset.char;let c=characters[current];document.querySelectorAll("[data-char]").forEach(x=>x.classList.toggle("active",x===b));$("heroRune").textContent=c.rune;$("heroName").textContent=c.name;$("heroClass").textContent=c.className;$("summaryClass").textContent=c.summary;hp=c.hp;mp=c.mp;setStats();show("charMessage","Character switched to "+c.summary+". Stats updated.")});
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));renderItems(b.dataset.tab);show("itemMessage","Showing "+b.textContent.toLowerCase()+". Select an item for details.")});
+$("rest").onclick=()=>{hp=Math.min(1000,hp+180);mp=Math.min(500,mp+100);setStats();show("charMessage","Recovered health and mana. Ready to continue.")};
+$("potion").onclick=()=>{if(potions<1){show("actionMessage","No potions remaining. Rest to recover your strength.");return}if(hp>=1000){show("actionMessage","Health is already full.");return}potions--;hp=Math.min(1000,hp+250);setStats();show("actionMessage","Health potion used. +250 HP (up to maximum).")};
+$("skill").onclick=()=>{if(mp<80){show("actionMessage","Not enough mana. Rest to recover.");return}mp-=80;xp=Math.min(99,xp+4);setStats();show("actionMessage",characters[current].summary+" skill cast! Mana spent, experience gained.")};
+$("explore").onclick=()=>{locations=Math.min(12,locations+1);xp=Math.min(99,xp+7);gold+=50;setStats();show("actionMessage","Exploration complete! +7 XP · +50 gold. Location "+locations+" discovered.")};
+const quests=["Wolves at the Gate","Lost Crystal","Daily Challenge"];
+$("quest").onclick=()=>{show("questMessage","Tracking: "+quests[questIndex%quests.length]+". Quest objective added to your active HUD.");questIndex++};
+renderItems();setStats();
+</script>
+</body>
+</html>

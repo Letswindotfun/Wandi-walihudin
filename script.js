@@ -5,6 +5,107 @@ document.addEventListener("DOMContentLoaded", () => {
   const content = document.querySelector(".content");
 
   const navItems = document.querySelectorAll(".nav-item[data-page]");
+
+  /* Dashboard HTML asli dari index.html — disimpan sebagai template */
+  const dashboardTemplate = content ? content.innerHTML : "";
+
+  function restoreDashboardTemplate() {
+    if (!content) return;
+    content.innerHTML = dashboardTemplate;
+  }
+
+  /* =========================================================
+     PORTOFOLIO WANDI — SETTINGS PAGE V1
+     ========================================================= */
+
+  function renderSettingsPage() {
+    if (!content) return;
+
+    content.innerHTML = `
+      <div id="pwSettingsPageV1" class="pw-settings-page">
+
+        <div class="page-header">
+          <div>
+            <h1>Settings</h1>
+            <p>Manage your portfolio dashboard preferences.</p>
+          </div>
+        </div>
+
+        <section class="pw-theme-setting">
+          <div class="pw-theme-setting-title">
+            Appearance
+          </div>
+
+          <div class="pw-theme-setting-desc">
+            Pilih tampilan aplikasi untuk dashboard portfolio.
+            Pilihan akan tersimpan otomatis di browser.
+          </div>
+
+          <div class="pw-theme-switch">
+
+            <button
+              type="button"
+              class="pw-theme-option"
+              data-theme="white">
+              ☀️ White
+            </button>
+
+            <button
+              type="button"
+              class="pw-theme-option"
+              data-theme="black">
+              🌙 Black
+            </button>
+
+          </div>
+        </section>
+
+      </div>
+    `;
+
+    if (typeof window.applyPortfolioTheme === "function") {
+      window.applyPortfolioTheme(
+        localStorage.getItem("pwThemeSettingsV1") || "white"
+      );
+    }
+
+    content
+      .querySelectorAll(".pw-theme-option")
+      .forEach(function (button) {
+        button.addEventListener("click", function () {
+          if (typeof window.applyPortfolioTheme === "function") {
+            window.applyPortfolioTheme(button.dataset.theme);
+          }
+        });
+      });
+  }
+
+  function openSettingsPage() {
+    
+  navItems.forEach(function (item) {
+    item.addEventListener("click", function () {
+      if (item.dataset.page === "settings") {
+        openSettingsPage();
+      }
+    });
+  });
+
+navItems.forEach(function (item) {
+      item.classList.remove("active");
+    });
+
+    const settingsNav = document.querySelector(
+      '[data-page="settings"]'
+    );
+
+    if (settingsNav) {
+      settingsNav.classList.add("active");
+    }
+
+    renderSettingsPage();
+  }
+
+
   const modalOverlay = document.getElementById("modalOverlay");
   const modalClose = document.getElementById("modalClose");
   const modalCancel = document.getElementById("modalCancel");
@@ -100,30 +201,43 @@ document.addEventListener("DOMContentLoaded", () => {
    * ---------------------------------------------------------
    */
 
-  navItems.forEach(item => {
+  function updateDashboardExtrasVisibility(page) {
+  const extras = document.getElementById("dashboardExtras");
+  if (!extras) return;
 
+  extras.classList.toggle("pw-page-hidden", page !== "dashboard");
+}
+
+navItems.forEach(item => {
     item.addEventListener("click", () => {
-
       navItems.forEach(nav => nav.classList.remove("active"));
       item.classList.add("active");
 
       const page = item.dataset.page;
 
-      if (page === "dashboard") {
-        if (typeof renderDashboard === "function") {
-          renderDashboard();
-        }
-        return;
-      }
+    updateDashboardExtrasVisibility(page);
 
-      renderModule(page);
+      if (page === "settings") {
+        if (content) content.innerHTML = "";
+        renderSettingsPage();
+        updateBreadcrumb("Settings");
+      } else if (page === "dashboard") {
+        if (content) content.innerHTML = dashboardTemplate;
+
+        if (typeof window.renderDashboard === "function") {
+          window.renderDashboard();
+        } else if (typeof window.renderLiveDashboard === "function") {
+          window.renderLiveDashboard();
+        }
+      } else {
+        if (content) content.innerHTML = "";
+        renderModule(page);
+      }
 
       if (window.innerWidth <= 900) {
         sidebar.classList.remove("open");
       }
-
     });
-
   });
 
   /*
@@ -164,6 +278,21 @@ document.addEventListener("DOMContentLoaded", () => {
    */
 
   function renderModule(page) {
+    if (page === "dashboard") {
+      restoreDashboardTemplate();
+      if (typeof window.renderDashboard === "function") {
+        window.renderDashboard();
+      }
+      updateBreadcrumb("Dashboard");
+      return;
+    }
+
+    if (page === "settings") {
+      renderSettingsPage();
+      updateBreadcrumb("Settings");
+      return;
+    }
+
 
     const modules = {
       finance: renderFinance,
@@ -1402,7 +1531,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!breadcrumb) return;
 
     breadcrumb.innerHTML = `
-      <span>Business Hub</span>
+      <span>Portofolio Wandi</span>
       <b>/</b>
       <strong>${page}</strong>
     `;
@@ -1502,7 +1631,7 @@ document.addEventListener("DOMContentLoaded", () => {
     main.innerHTML = `
       <div class="module-header">
         <div>
-          <div class="module-eyebrow">BUSINESS HUB</div>
+          <div class="module-eyebrow">PORTOFOLIO WANDI</div>
           <h1>Sales</h1>
           <p>Monitor sales performance and recent orders.</p>
         </div>
@@ -1642,7 +1771,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="module-header">
 
         <div>
-          <div class="module-eyebrow">BUSINESS HUB</div>
+          <div class="module-eyebrow">PORTOFOLIO WANDI</div>
           <h1>Customers</h1>
           <p>Manage customers, customer value, and relationships.</p>
         </div>
@@ -5282,938 +5411,1040 @@ document.addEventListener("DOMContentLoaded", () => {
 
 })();
 
+
+
+
 /* =========================================================
-   DASHBOARD LIVE V3
-   EXECUTIVE BUSINESS CONTROL CENTER
+   DASHBOARD UI V4 — PREMIUM BUSINESS CONTROL CENTER
+   UI ONLY / SAFE REPLACEMENT
    ========================================================= */
 (function () {
   "use strict";
 
   const TX_KEY = "businessHubTransactions";
   const SALES_KEY = "businessHubSalesSafe";
-  const PRODUCTS_KEY = "businessHubProductsV3";
-  const CUSTOMERS_KEY = "businessHubCustomersSafe";
+  const PRODUCT_KEY = "businessHubProductsV3";
+  const CUSTOMER_KEY = "businessHubCustomersSafe";
   const TARGET_KEY = "businessHubSalesTargetsV1";
 
-  let currentPeriod = 30;
+  const money = (n) => "Rp " + Number(n || 0).toLocaleString("id-ID");
+  const num = (n) => Number(n || 0);
 
   function read(key, fallback) {
     try {
-      const value = JSON.parse(localStorage.getItem(key));
-      return Array.isArray(value) ? value : fallback;
+      const v = JSON.parse(localStorage.getItem(key));
+      return v == null ? fallback : v;
     } catch {
       return fallback;
     }
   }
 
-  function money(value) {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0
-    }).format(Number(value || 0));
-  }
-
-  function compact(value) {
-    value = Number(value || 0);
-    if (value >= 1000000000) return "Rp " + (value / 1000000000).toFixed(1) + " M";
-    if (value >= 1000000) return "Rp " + (value / 1000000).toFixed(1) + " jt";
-    if (value >= 1000) return "Rp " + (value / 1000).toFixed(0) + " rb";
-    return money(value);
-  }
-
-  function esc(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  function dateValue(value) {
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? new Date() : d;
-  }
-
-  function daysAgo(period) {
+  function monthKey() {
     const d = new Date();
-    d.setHours(23, 59, 59, 999);
-    d.setDate(d.getDate() - period + 1);
-    d.setHours(0, 0, 0, 0);
-    return d;
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
   }
 
-  function navigate(page) {
-    const el = document.querySelector('[data-page="' + page + '"]');
-    if (el) el.click();
+  function formatDate(v) {
+    if (!v) return "-";
+    const d = new Date(v);
+    if (isNaN(d)) return v;
+    return d.toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
   }
 
   function renderDashboard() {
+    const activePage = document.querySelector(".nav-item.active[data-page]");
+    if (activePage && activePage.dataset.page !== "dashboard") {
+      return;
+    }
+
     const content = document.querySelector(".content");
     if (!content) return;
 
     const transactions = read(TX_KEY, []);
     const sales = read(SALES_KEY, []);
-    const products = read(PRODUCTS_KEY, []);
-    const customers = read(CUSTOMERS_KEY, []);
-    const targetData = read(TARGET_KEY, []);
+    const products = read(PRODUCT_KEY, []);
+    const customers = read(CUSTOMER_KEY, []);
+    const targetData = read(TARGET_KEY, {});
 
-    const cutoff = daysAgo(currentPeriod);
+    const currentMonth = monthKey();
 
-    const periodTx = transactions.filter(t => dateValue(t.date) >= cutoff);
-    const periodSales = sales.filter(s => dateValue(s.date) >= cutoff);
+    const monthTx = transactions.filter(t => {
+      const d = String(t.date || "");
+      return d.startsWith(currentMonth);
+    });
 
-    const revenue = periodTx
+    const revenue = monthTx
       .filter(t => String(t.type).toLowerCase() === "income")
-      .reduce((a, t) => a + Number(t.amount || 0), 0);
+      .reduce((a, t) => a + num(t.amount), 0);
 
-    const expenses = periodTx
+    const expenses = monthTx
       .filter(t => String(t.type).toLowerCase() === "expense")
-      .reduce((a, t) => a + Number(t.amount || 0), 0);
+      .reduce((a, t) => a + num(t.amount), 0);
 
     const profit = revenue - expenses;
     const margin = revenue ? (profit / revenue) * 100 : 0;
 
-    const salesRevenue = periodSales.reduce(
-      (a, s) => a + Number(s.amount || 0), 0
-    );
+    const salesMonth = sales.filter(s => {
+      const d = String(s.date || "");
+      return d.includes("Sep 2026") || d.startsWith(currentMonth);
+    });
+
+    const salesRevenue = salesMonth.reduce((a, s) => a + num(s.amount), 0);
 
     const inventoryValue = products.reduce(
-      (a, p) =>
-        a +
-        Number(p.stock || 0) *
-        Number(p.price || 0),
+      (a, p) => a + (num(p.stock) * num(p.cost || p.price)),
       0
     );
 
-    const lowStock = products.filter(
-      p => Number(p.stock || 0) < Number(p.targetStock ?? p.target ?? 0)
+    const lowStock = products.filter(p =>
+      num(p.stock) <= num(p.target || 10)
     );
 
-    const target =
-      targetData.find &&
-      targetData.find(t => t.month === new Date().toISOString().slice(0, 7));
+    const target = num(targetData.revenueTarget || 100000000);
+    const targetPct = target ? Math.min((salesRevenue / target) * 100, 100) : 0;
 
-    const revenueTarget = Number(
-      target?.revenueTarget || 100000000
-    );
-
-    const achievement = revenueTarget
-      ? (revenue / revenueTarget) * 100
-      : 0;
-
-    const productMap = {};
-
-    periodSales.forEach(s => {
-      const key = s.product || "Unknown Product";
-      if (!productMap[key]) {
-        productMap[key] = {
-          name: key,
-          revenue: 0,
-          qty: 0
-        };
-      }
-      productMap[key].revenue += Number(s.amount || 0);
-      productMap[key].qty += Number(s.qty || 0);
-    });
-
-    const topProducts = Object.values(productMap)
-      .sort((a, b) => b.revenue - a.revenue)
+    const topProducts = [...products]
+      .sort((a, b) => num(b.sold) - num(a.sold))
       .slice(0, 5);
 
-    const customerMap = {};
-
-    periodSales.forEach(s => {
-      const key = s.customerName || s.customer || "Unknown Customer";
-      if (!customerMap[key]) {
-        customerMap[key] = {
-          name: key,
-          revenue: 0,
-          orders: 0
-        };
-      }
-      customerMap[key].revenue += Number(s.amount || 0);
-      customerMap[key].orders++;
-    });
-
-    const topCustomers = Object.values(customerMap)
-      .sort((a, b) => b.revenue - a.revenue)
+    const topCustomers = [...customers]
+      .sort((a, b) => num(b.revenue) - num(a.revenue))
       .slice(0, 5);
-
-    const recent = [...periodTx, ...periodSales.map(s => ({
-      date: s.date,
-      type: "sale",
-      description: s.product || "Sale",
-      amount: s.amount
-    }))]
-      .sort((a, b) => dateValue(b.date) - dateValue(a.date))
-      .slice(0, 6);
 
     const opportunities = [];
 
     if (profit < 0) {
       opportunities.push({
-        type: "danger",
-        icon: "⚠",
-        title: "Profit negatif",
-        text: "Pengeluaran periode ini lebih besar dari revenue.",
-        page: "expenses"
+        level: "critical",
+        title: "Profit bulan ini negatif",
+        text: "Pengeluaran lebih besar dari revenue.",
+        action: "expenses"
       });
     }
 
-    if (achievement < 70) {
+    if (revenue && expenses / revenue >= 0.6) {
       opportunities.push({
-        type: "warning",
-        icon: "↗",
-        title: "Revenue di bawah target",
-        text: achievement.toFixed(0) + "% dari target revenue.",
-        page: "sales"
+        level: "high",
+        title: "Expense ratio tinggi",
+        text: "Pengeluaran sudah lebih dari 60% revenue.",
+        action: "expenses"
+      });
+    }
+
+    if (targetPct < 70) {
+      opportunities.push({
+        level: "high",
+        title: "Target sales masih tertinggal",
+        text: "Pencapaian target revenue di bawah 70%.",
+        action: "sales"
       });
     }
 
     if (lowStock.length) {
       opportunities.push({
-        type: "warning",
-        icon: "!",
-        title: lowStock.length + " produk perlu restock",
-        text: "Beberapa produk berada di bawah batas stok.",
-        page: "products"
-      });
-    }
-
-    if (margin >= 30) {
-      opportunities.push({
-        type: "success",
-        icon: "✓",
-        title: "Margin sehat",
-        text: "Profit margin mencapai " + margin.toFixed(1) + "%.",
-        page: "finance"
+        level: "medium",
+        title: lowStock.length + " produk perlu perhatian",
+        text: "Beberapa produk berada di level stock rendah.",
+        action: "products"
       });
     }
 
     if (!opportunities.length) {
       opportunities.push({
-        type: "success",
-        icon: "✓",
-        title: "Tidak ada alert utama",
-        text: "Kondisi bisnis terlihat stabil pada periode ini.",
-        page: "finance"
+        level: "positive",
+        title: "Operasional terlihat stabil",
+        text: "Tidak ada alert utama yang terdeteksi.",
+        action: "sales"
       });
     }
 
-    const maxChart = Math.max(revenue, expenses, 1);
+    const recent = [...transactions]
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .slice(0, 6);
 
-    const chartBars = [];
+    const maxProductSold = Math.max(
+      1,
+      ...topProducts.map(p => num(p.sold))
+    );
+
+    const maxCustomerRevenue = Math.max(
+      1,
+      ...topCustomers.map(c => num(c.revenue))
+    );
+
+    const css = `
+      <style>
+        .bh4 {
+          --ink:#182230;
+          --muted:#7b8798;
+          --line:#e8edf3;
+          --soft:#f6f8fb;
+          --card:#ffffff;
+          --accent:#2563eb;
+          --green:#159570;
+          --red:#dc4b5a;
+          --orange:#d98216;
+          max-width:1500px;
+          margin:0 auto;
+          color:var(--ink);
+          font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        }
+
+        .bh4 * { box-sizing:border-box; }
+
+        .bh4-head {
+          display:flex;
+          justify-content:space-between;
+          align-items:flex-end;
+          gap:24px;
+          margin-bottom:26px;
+        }
+
+        .bh4-eyebrow {
+          font-size:11px;
+          font-weight:800;
+          letter-spacing:.14em;
+          text-transform:uppercase;
+          color:var(--accent);
+          margin-bottom:7px;
+        }
+
+        .bh4-title {
+          margin:0;
+          font-size:30px;
+          line-height:1.15;
+          letter-spacing:-.04em;
+          font-weight:800;
+        }
+
+        .bh4-sub {
+          margin:8px 0 0;
+          color:var(--muted);
+          font-size:14px;
+        }
+
+        .bh4-head-actions {
+          display:flex;
+          align-items:center;
+          gap:10px;
+        }
+
+        .bh4-select,
+        .bh4-btn {
+          height:42px;
+          border:1px solid var(--line);
+          background:#fff;
+          border-radius:11px;
+          padding:0 14px;
+          font-size:13px;
+          font-weight:700;
+          color:var(--ink);
+          cursor:pointer;
+        }
+
+        .bh4-btn {
+          background:var(--ink);
+          color:#fff;
+          border-color:var(--ink);
+        }
+
+        .bh4-btn:hover { opacity:.9; }
+
+        .bh4-kpis {
+          display:grid;
+          grid-template-columns:repeat(4,1fr);
+          gap:14px;
+          margin-bottom:16px;
+        }
+
+        .bh4-kpi {
+          background:var(--card);
+          border:1px solid var(--line);
+          border-radius:16px;
+          padding:20px;
+          min-height:145px;
+          box-shadow:0 5px 20px rgba(20,30,45,.035);
+        }
+
+        .bh4-kpi-top {
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:10px;
+        }
+
+        .bh4-kpi-label {
+          color:var(--muted);
+          font-size:12px;
+          font-weight:700;
+        }
+
+        .bh4-icon {
+          width:34px;
+          height:34px;
+          border-radius:10px;
+          display:grid;
+          place-items:center;
+          background:var(--soft);
+          font-size:15px;
+        }
+
+        .bh4-kpi-value {
+          margin-top:18px;
+          font-size:25px;
+          line-height:1;
+          font-weight:800;
+          letter-spacing:-.035em;
+        }
+
+        .bh4-kpi-foot {
+          margin-top:12px;
+          color:var(--muted);
+          font-size:11px;
+        }
+
+        .bh4-positive { color:var(--green); }
+        .bh4-negative { color:var(--red); }
+
+        .bh4-grid-main {
+          display:grid;
+          grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);
+          gap:16px;
+          margin-bottom:16px;
+        }
+
+        .bh4-card {
+          background:#fff;
+          border:1px solid var(--line);
+          border-radius:16px;
+          box-shadow:0 5px 20px rgba(20,30,45,.035);
+          overflow:hidden;
+        }
+
+        .bh4-card-head {
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:12px;
+          padding:20px 20px 12px;
+        }
+
+        .bh4-card-title {
+          margin:0;
+          font-size:15px;
+          font-weight:800;
+        }
+
+        .bh4-card-desc {
+          margin:4px 0 0;
+          font-size:11px;
+          color:var(--muted);
+        }
+
+        .bh4-chart {
+          height:250px;
+          padding:18px 20px 20px;
+          display:flex;
+          align-items:flex-end;
+          gap:9px;
+        }
+
+        .bh4-bar-day {
+          flex:1;
+          min-width:0;
+          height:100%;
+          display:flex;
+          flex-direction:column;
+          justify-content:flex-end;
+          gap:5px;
+        }
+
+        .bh4-bars {
+          height:205px;
+          display:flex;
+          align-items:flex-end;
+          justify-content:center;
+          gap:4px;
+        }
+
+        .bh4-bar {
+          width:42%;
+          min-height:3px;
+          border-radius:5px 5px 2px 2px;
+        }
+
+        .bh4-bar.rev { background:#2563eb; }
+        .bh4-bar.exp { background:#d9dee7; }
+
+        .bh4-day-label {
+          text-align:center;
+          color:#9aa4b2;
+          font-size:9px;
+        }
+
+        .bh4-legend {
+          display:flex;
+          gap:15px;
+          padding:0 20px 16px;
+          font-size:10px;
+          color:var(--muted);
+        }
+
+        .bh4-dot {
+          width:8px;
+          height:8px;
+          display:inline-block;
+          border-radius:50%;
+          margin-right:5px;
+        }
+
+        .bh4-progress-wrap {
+          padding:4px 20px 22px;
+        }
+
+        .bh4-progress-label {
+          display:flex;
+          justify-content:space-between;
+          margin-bottom:9px;
+          font-size:12px;
+          font-weight:700;
+        }
+
+        .bh4-progress {
+          height:9px;
+          background:#edf1f5;
+          border-radius:99px;
+          overflow:hidden;
+        }
+
+        .bh4-progress > span {
+          display:block;
+          height:100%;
+          background:#2563eb;
+          border-radius:inherit;
+        }
+
+        .bh4-margin {
+          text-align:center;
+          padding:12px 20px 25px;
+        }
+
+        .bh4-margin-value {
+          font-size:46px;
+          font-weight:850;
+          letter-spacing:-.06em;
+          line-height:1;
+        }
+
+        .bh4-margin-label {
+          margin-top:8px;
+          color:var(--muted);
+          font-size:12px;
+        }
+
+        .bh4-op {
+          display:flex;
+          align-items:flex-start;
+          gap:11px;
+          padding:12px 20px;
+          border-top:1px solid #f0f2f5;
+        }
+
+        .bh4-op:first-of-type { border-top:0; }
+
+        .bh4-severity {
+          width:8px;
+          min-width:8px;
+          height:8px;
+          border-radius:50%;
+          margin-top:5px;
+          background:#94a3b8;
+        }
+
+        .bh4-severity.critical,
+        .bh4-severity.high { background:#dc4b5a; }
+
+        .bh4-severity.medium { background:#d98216; }
+        .bh4-severity.positive { background:#159570; }
+
+        .bh4-op-body { flex:1; min-width:0; }
+
+        .bh4-op-title {
+          font-size:12px;
+          font-weight:800;
+        }
+
+        .bh4-op-text {
+          margin-top:3px;
+          font-size:10px;
+          line-height:1.45;
+          color:var(--muted);
+        }
+
+        .bh4-op-link {
+          border:0;
+          background:none;
+          padding:0;
+          color:var(--accent);
+          font-size:10px;
+          font-weight:800;
+          cursor:pointer;
+          white-space:nowrap;
+        }
+
+        .bh4-two {
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:16px;
+          margin-bottom:16px;
+        }
+
+        .bh4-list {
+          padding:4px 20px 16px;
+        }
+
+        .bh4-product {
+          display:grid;
+          grid-template-columns:28px 1fr auto;
+          gap:10px;
+          align-items:center;
+          padding:11px 0;
+          border-bottom:1px solid #f0f2f5;
+        }
+
+        .bh4-rank {
+          width:28px;
+          height:28px;
+          border-radius:8px;
+          display:grid;
+          place-items:center;
+          background:var(--soft);
+          font-size:10px;
+          font-weight:800;
+          color:#667085;
+        }
+
+        .bh4-name {
+          font-size:12px;
+          font-weight:750;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;
+        }
+
+        .bh4-mini {
+          margin-top:6px;
+          height:5px;
+          background:#edf1f5;
+          border-radius:99px;
+          overflow:hidden;
+        }
+
+        .bh4-mini span {
+          display:block;
+          height:100%;
+          background:#2563eb;
+          border-radius:99px;
+        }
+
+        .bh4-value {
+          text-align:right;
+          font-size:11px;
+          font-weight:800;
+        }
+
+        .bh4-table {
+          width:100%;
+          border-collapse:collapse;
+          font-size:11px;
+        }
+
+        .bh4-table th {
+          padding:10px 20px;
+          text-align:left;
+          color:#9aa4b2;
+          font-size:9px;
+          font-weight:800;
+          text-transform:uppercase;
+          letter-spacing:.08em;
+          border-bottom:1px solid var(--line);
+        }
+
+        .bh4-table td {
+          padding:12px 20px;
+          border-bottom:1px solid #f0f2f5;
+        }
+
+        .bh4-type {
+          font-weight:800;
+        }
+
+        .bh4-type.income { color:var(--green); }
+        .bh4-type.expense { color:var(--red); }
+
+        .bh4-actions {
+          display:grid;
+          grid-template-columns:repeat(5,1fr);
+          gap:10px;
+          padding:0 0 20px;
+        }
+
+        .bh4-action {
+          border:1px solid var(--line);
+          background:#fff;
+          border-radius:13px;
+          padding:14px 12px;
+          cursor:pointer;
+          text-align:left;
+          transition:.15s ease;
+        }
+
+        .bh4-action:hover {
+          border-color:#c9d5e5;
+          transform:translateY(-1px);
+        }
+
+        .bh4-action-icon {
+          font-size:16px;
+          margin-bottom:10px;
+        }
+
+        .bh4-action-title {
+          font-size:11px;
+          font-weight:800;
+        }
+
+        .bh4-action-desc {
+          margin-top:3px;
+          font-size:9px;
+          color:var(--muted);
+        }
+
+        .bh4-empty {
+          padding:25px 20px;
+          text-align:center;
+          color:var(--muted);
+          font-size:11px;
+        }
+
+        @media(max-width:1050px) {
+          .bh4-kpis { grid-template-columns:repeat(2,1fr); }
+          .bh4-grid-main { grid-template-columns:1fr; }
+          .bh4-actions { grid-template-columns:repeat(3,1fr); }
+        }
+
+        @media(max-width:720px) {
+          .bh4-head {
+            align-items:flex-start;
+            flex-direction:column;
+          }
+
+          .bh4-head-actions {
+            width:100%;
+          }
+
+          .bh4-select,
+          .bh4-btn {
+            flex:1;
+          }
+
+          .bh4-title { font-size:24px; }
+
+          .bh4-kpis {
+            grid-template-columns:1fr 1fr;
+            gap:9px;
+          }
+
+          .bh4-kpi {
+            min-height:125px;
+            padding:15px;
+          }
+
+          .bh4-kpi-value {
+            font-size:19px;
+            margin-top:14px;
+          }
+
+          .bh4-two {
+            grid-template-columns:1fr;
+          }
+
+          .bh4-actions {
+            grid-template-columns:1fr 1fr;
+          }
+
+          .bh4-card-head {
+            padding-left:15px;
+            padding-right:15px;
+          }
+
+          .bh4-chart {
+            padding-left:12px;
+            padding-right:12px;
+          }
+
+          .bh4-table th,
+          .bh4-table td {
+            padding-left:12px;
+            padding-right:12px;
+          }
+
+          .bh4-table th:nth-child(3),
+          .bh4-table td:nth-child(3) {
+            display:none;
+          }
+        }
+      </style>
+    `;
+
+    const last7 = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
 
-      const dayRevenue = transactions
-        .filter(t =>
-          String(t.type).toLowerCase() === "income" &&
-          String(t.date).slice(0, 10) === key
-        )
-        .reduce((a, t) => a + Number(t.amount || 0), 0);
+      const rev = transactions
+        .filter(t => String(t.date || "").slice(0,10) === key && String(t.type).toLowerCase() === "income")
+        .reduce((a,t) => a + num(t.amount), 0);
 
-      const dayExpense = transactions
-        .filter(t =>
-          String(t.type).toLowerCase() === "expense" &&
-          String(t.date).slice(0, 10) === key
-        )
-        .reduce((a, t) => a + Number(t.amount || 0), 0);
+      const exp = transactions
+        .filter(t => String(t.date || "").slice(0,10) === key && String(t.type).toLowerCase() === "expense")
+        .reduce((a,t) => a + num(t.amount), 0);
 
-      chartBars.push({
-        label: d.toLocaleDateString("id-ID", {
-          day: "2-digit",
-          month: "short"
-        }),
-        revenue: dayRevenue,
-        expense: dayExpense
-      });
+      last7.push({ d, rev, exp });
     }
 
-    content.innerHTML = `
-      <div class="bh-dashboard">
+    const maxChart = Math.max(
+      1,
+      ...last7.flatMap(x => [x.rev, x.exp])
+    );
 
-        <style>
-          .bh-dashboard{
-            min-height:100%;
-            padding:28px;
-            background:#f5f7fb;
-            color:#172033;
-          }
+    const chart = last7.map(x => `
+      <div class="bh4-bar-day">
+        <div class="bh4-bars">
+          <span class="bh4-bar rev" style="height:${Math.max(3,(x.rev/maxChart)*100)}%"></span>
+          <span class="bh4-bar exp" style="height:${Math.max(3,(x.exp/maxChart)*100)}%"></span>
+        </div>
+        <div class="bh4-day-label">${x.d.toLocaleDateString("id-ID",{day:"2-digit",month:"short"})}</div>
+      </div>
+    `).join("");
 
-          .bh-head{
-            display:flex;
-            justify-content:space-between;
-            align-items:flex-end;
-            gap:20px;
-            margin-bottom:24px;
-          }
+    const opportunityHtml = opportunities.slice(0,4).map(o => `
+      <div class="bh4-op">
+        <span class="bh4-severity ${o.level}"></span>
+        <div class="bh4-op-body">
+          <div class="bh4-op-title">${o.title}</div>
+          <div class="bh4-op-text">${o.text}</div>
+        </div>
+        <button class="bh4-op-link" data-page="${o.action}">View</button>
+      </div>
+    `).join("");
 
-          .bh-head-kicker{
-            color:#667085;
-            font-size:12px;
-            font-weight:700;
-            text-transform:uppercase;
-            letter-spacing:.12em;
-            margin-bottom:6px;
-          }
-
-          .bh-head h1{
-            margin:0;
-            font-size:30px;
-            letter-spacing:-.03em;
-          }
-
-          .bh-head p{
-            margin:7px 0 0;
-            color:#667085;
-          }
-
-          .bh-controls{
-            display:flex;
-            gap:10px;
-            flex-wrap:wrap;
-          }
-
-          .bh-control{
-            border:1px solid #d9dee8;
-            background:#fff;
-            border-radius:10px;
-            padding:10px 13px;
-            font-weight:600;
-            color:#344054;
-          }
-
-          .bh-btn{
-            border:0;
-            border-radius:10px;
-            padding:10px 15px;
-            background:#172033;
-            color:#fff;
-            font-weight:700;
-            cursor:pointer;
-          }
-
-          .bh-btn:hover{opacity:.9}
-
-          .bh-kpis{
-            display:grid;
-            grid-template-columns:repeat(4,1fr);
-            gap:14px;
-            margin-bottom:18px;
-          }
-
-          .bh-kpi{
-            background:#fff;
-            border:1px solid #e5e9f0;
-            border-radius:16px;
-            padding:19px;
-            box-shadow:0 4px 14px rgba(16,24,40,.04);
-          }
-
-          .bh-kpi-label{
-            color:#667085;
-            font-size:13px;
-            font-weight:600;
-          }
-
-          .bh-kpi-value{
-            margin-top:8px;
-            font-size:25px;
-            font-weight:800;
-            letter-spacing:-.03em;
-          }
-
-          .bh-kpi-sub{
-            margin-top:8px;
-            color:#98a2b3;
-            font-size:12px;
-          }
-
-          .bh-layout{
-            display:grid;
-            grid-template-columns:minmax(0,1.7fr) minmax(300px,.8fr);
-            gap:18px;
-          }
-
-          .bh-card{
-            background:#fff;
-            border:1px solid #e5e9f0;
-            border-radius:16px;
-            padding:20px;
-            box-shadow:0 4px 14px rgba(16,24,40,.04);
-            margin-bottom:18px;
-          }
-
-          .bh-card-head{
-            display:flex;
-            justify-content:space-between;
-            align-items:flex-start;
-            gap:15px;
-            margin-bottom:18px;
-          }
-
-          .bh-card-head h2{
-            margin:0;
-            font-size:17px;
-          }
-
-          .bh-card-head p{
-            margin:5px 0 0;
-            color:#98a2b3;
-            font-size:12px;
-          }
-
-          .bh-chart{
-            height:230px;
-            display:flex;
-            align-items:flex-end;
-            gap:12px;
-            padding-top:12px;
-          }
-
-          .bh-day{
-            flex:1;
-            height:100%;
-            display:flex;
-            flex-direction:column;
-            justify-content:flex-end;
-            gap:7px;
-            min-width:0;
-          }
-
-          .bh-bars{
-            height:190px;
-            display:flex;
-            align-items:flex-end;
-            justify-content:center;
-            gap:4px;
-          }
-
-          .bh-bar{
-            width:13px;
-            min-height:3px;
-            border-radius:5px 5px 2px 2px;
-          }
-
-          .bh-rev{background:#172033}
-          .bh-exp{background:#d0d5dd}
-
-          .bh-day-label{
-            text-align:center;
-            font-size:10px;
-            color:#98a2b3;
-          }
-
-          .bh-legend{
-            display:flex;
-            gap:18px;
-            font-size:12px;
-            color:#667085;
-          }
-
-          .bh-dot{
-            display:inline-block;
-            width:8px;
-            height:8px;
-            border-radius:50%;
-            margin-right:5px;
-          }
-
-          .bh-op{
-            display:flex;
-            gap:12px;
-            padding:13px 0;
-            border-bottom:1px solid #eef0f4;
-          }
-
-          .bh-op:last-child{border-bottom:0}
-
-          .bh-op-icon{
-            width:34px;
-            height:34px;
-            flex:0 0 34px;
-            border-radius:10px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            background:#f2f4f7;
-            font-weight:800;
-          }
-
-          .bh-op.danger .bh-op-icon{background:#fef3f2;color:#b42318}
-          .bh-op.warning .bh-op-icon{background:#fffaeb;color:#b54708}
-          .bh-op.success .bh-op-icon{background:#ecfdf3;color:#027a48}
-
-          .bh-op strong{display:block;font-size:13px}
-          .bh-op p{margin:4px 0 8px;color:#667085;font-size:12px;line-height:1.4}
-
-          .bh-link{
-            border:0;
-            background:none;
-            padding:0;
-            color:#344054;
-            font-size:12px;
-            font-weight:800;
-            cursor:pointer;
-          }
-
-          .bh-two{
-            display:grid;
-            grid-template-columns:1fr 1fr;
-            gap:18px;
-          }
-
-          .bh-row{
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:12px;
-            padding:12px 0;
-            border-bottom:1px solid #eef0f4;
-          }
-
-          .bh-row:last-child{border-bottom:0}
-
-          .bh-row-main{
-            min-width:0;
-          }
-
-          .bh-row-main strong{
-            display:block;
-            font-size:13px;
-            white-space:nowrap;
-            overflow:hidden;
-            text-overflow:ellipsis;
-          }
-
-          .bh-row-main span{
-            display:block;
-            color:#98a2b3;
-            font-size:11px;
-            margin-top:3px;
-          }
-
-          .bh-row-value{
-            font-weight:800;
-            font-size:12px;
-            white-space:nowrap;
-          }
-
-          .bh-progress{
-            height:7px;
-            background:#eef1f5;
-            border-radius:99px;
-            overflow:hidden;
-            margin-top:9px;
-          }
-
-          .bh-progress i{
-            display:block;
-            height:100%;
-            background:#172033;
-            border-radius:99px;
-          }
-
-          .bh-snapshot{
-            display:grid;
-            grid-template-columns:repeat(3,1fr);
-            gap:10px;
-          }
-
-          .bh-mini{
-            border:1px solid #eaecf0;
-            border-radius:12px;
-            padding:13px;
-          }
-
-          .bh-mini span{
-            display:block;
-            color:#98a2b3;
-            font-size:11px;
-          }
-
-          .bh-mini strong{
-            display:block;
-            margin-top:5px;
-            font-size:16px;
-          }
-
-          .bh-actions{
-            display:grid;
-            grid-template-columns:repeat(4,1fr);
-            gap:10px;
-          }
-
-          .bh-action{
-            border:1px solid #e5e9f0;
-            background:#fff;
-            border-radius:12px;
-            padding:14px;
-            text-align:left;
-            cursor:pointer;
-            font-weight:700;
-          }
-
-          .bh-action:hover{
-            border-color:#98a2b3;
-            transform:translateY(-1px);
-          }
-
-          .bh-table{
-            width:100%;
-            border-collapse:collapse;
-          }
-
-          .bh-table th{
-            text-align:left;
-            color:#98a2b3;
-            font-size:11px;
-            padding:10px 8px;
-            border-bottom:1px solid #eaecf0;
-          }
-
-          .bh-table td{
-            padding:11px 8px;
-            border-bottom:1px solid #f0f2f5;
-            font-size:12px;
-          }
-
-          .bh-type{
-            font-weight:800;
-          }
-
-          .bh-empty{
-            padding:20px 0;
-            text-align:center;
-            color:#98a2b3;
-            font-size:12px;
-          }
-
-          @media(max-width:1050px){
-            .bh-kpis{grid-template-columns:repeat(2,1fr)}
-            .bh-layout{grid-template-columns:1fr}
-          }
-
-          @media(max-width:700px){
-            .bh-dashboard{padding:16px}
-            .bh-head{align-items:stretch;flex-direction:column}
-            .bh-head h1{font-size:24px}
-            .bh-kpis{grid-template-columns:1fr 1fr}
-            .bh-two{grid-template-columns:1fr}
-            .bh-actions{grid-template-columns:1fr 1fr}
-            .bh-snapshot{grid-template-columns:1fr}
-            .bh-chart{gap:5px}
-            .bh-bars{gap:2px}
-            .bh-bar{width:8px}
-          }
-        </style>
-
-        <div class="bh-head">
+    const productsHtml = topProducts.length
+      ? topProducts.map((p,i) => `
+        <div class="bh4-product">
+          <div class="bh4-rank">${i+1}</div>
           <div>
-            <div class="bh-head-kicker">Executive Control Center</div>
-            <h1>Business Dashboard</h1>
-            <p>Ringkasan kondisi bisnis, performa dan tindakan yang perlu dilakukan.</p>
+            <div class="bh4-name">${p.name || "Unnamed Product"}</div>
+            <div class="bh4-mini">
+              <span style="width:${Math.min(100,(num(p.sold)/maxProductSold)*100)}%"></span>
+            </div>
+          </div>
+          <div class="bh4-value">${num(p.sold)} sold</div>
+        </div>
+      `).join("")
+      : `<div class="bh4-empty">Belum ada data produk.</div>`;
+
+    const customersHtml = topCustomers.length
+      ? topCustomers.map((c,i) => `
+        <div class="bh4-product">
+          <div class="bh4-rank">${i+1}</div>
+          <div>
+            <div class="bh4-name">${c.name || c.company || "Customer"}</div>
+            <div class="bh4-mini">
+              <span style="width:${Math.min(100,(num(c.revenue)/maxCustomerRevenue)*100)}%"></span>
+            </div>
+          </div>
+          <div class="bh4-value">${money(c.revenue)}</div>
+        </div>
+      `).join("")
+      : `<div class="bh4-empty">Belum ada data customer.</div>`;
+
+    const recentHtml = recent.length
+      ? recent.map(t => `
+        <tr>
+          <td>${formatDate(t.date)}</td>
+          <td>${t.description || t.category || "-"}</td>
+          <td>${t.category || "-"}</td>
+          <td class="bh4-type ${String(t.type).toLowerCase()}">
+            ${String(t.type).toLowerCase() === "income" ? "+" : "-"} ${money(t.amount)}
+          </td>
+        </tr>
+      `).join("")
+      : `<tr><td colspan="4" class="bh4-empty">Belum ada transaksi.</td></tr>`;
+
+    content.innerHTML = `
+      <div class="bh4">
+        ${css}
+
+        <div class="bh4-head">
+          <div>
+            <div class="bh4-eyebrow">Business Control Center</div>
+            <h1 class="bh4-title">Executive Dashboard</h1>
+            <p class="bh4-sub">Pantau kesehatan bisnis, performa penjualan, dan peluang tindakan dalam satu layar.</p>
           </div>
 
-          <div class="bh-controls">
-            <select class="bh-control" id="bh-period">
-              <option value="7">7 hari</option>
+          <div class="bh4-head-actions">
+            <select class="bh4-select" id="bh4-period">
               <option value="30">30 hari</option>
               <option value="90">90 hari</option>
               <option value="365">1 tahun</option>
             </select>
-            <button class="bh-btn" id="bh-refresh">↻ Refresh</button>
+            <button class="bh4-btn bh4-quick-toggle" id="bh4-quick-toggle" type="button">
+              ⚡ Quick Action
+            </button>
+            <button class="bh4-btn" id="bh4-refresh" type="button">↻ Refresh</button>
           </div>
         </div>
 
-        <div class="bh-kpis">
-          <div class="bh-kpi">
-            <div class="bh-kpi-label">Revenue</div>
-            <div class="bh-kpi-value">${compact(revenue)}</div>
-            <div class="bh-kpi-sub">Total pemasukan periode</div>
+        <div class="bh4-kpis">
+          <div class="bh4-kpi">
+            <div class="bh4-kpi-top">
+              <span class="bh4-kpi-label">Revenue</span>
+              <span class="bh4-icon">↗</span>
+            </div>
+            <div class="bh4-kpi-value">${money(revenue)}</div>
+            <div class="bh4-kpi-foot">Pendapatan bulan berjalan</div>
           </div>
 
-          <div class="bh-kpi">
-            <div class="bh-kpi-label">Expenses</div>
-            <div class="bh-kpi-value">${compact(expenses)}</div>
-            <div class="bh-kpi-sub">Total pengeluaran periode</div>
+          <div class="bh4-kpi">
+            <div class="bh4-kpi-top">
+              <span class="bh4-kpi-label">Expenses</span>
+              <span class="bh4-icon">↘</span>
+            </div>
+            <div class="bh4-kpi-value">${money(expenses)}</div>
+            <div class="bh4-kpi-foot">Total pengeluaran bulan berjalan</div>
           </div>
 
-          <div class="bh-kpi">
-            <div class="bh-kpi-label">Net Profit</div>
-            <div class="bh-kpi-value">${compact(profit)}</div>
-            <div class="bh-kpi-sub">Margin ${margin.toFixed(1)}%</div>
+          <div class="bh4-kpi">
+            <div class="bh4-kpi-top">
+              <span class="bh4-kpi-label">Net Profit</span>
+              <span class="bh4-icon">✓</span>
+            </div>
+            <div class="bh4-kpi-value ${profit >= 0 ? "bh4-positive" : "bh4-negative"}">${money(profit)}</div>
+            <div class="bh4-kpi-foot">${margin.toFixed(1)}% profit margin</div>
           </div>
 
-          <div class="bh-kpi">
-            <div class="bh-kpi-label">Sales</div>
-            <div class="bh-kpi-value">${compact(salesRevenue)}</div>
-            <div class="bh-kpi-sub">${periodSales.length} transaksi penjualan</div>
+          <div class="bh4-kpi">
+            <div class="bh4-kpi-top">
+              <span class="bh4-kpi-label">Inventory Value</span>
+              <span class="bh4-icon">▣</span>
+            </div>
+            <div class="bh4-kpi-value">${money(inventoryValue)}</div>
+            <div class="bh4-kpi-foot">${lowStock.length} produk perlu perhatian</div>
           </div>
         </div>
 
-        <div class="bh-layout">
-
-          <div>
-
-            <section class="bh-card">
-              <div class="bh-card-head">
-                <div>
-                  <h2>Financial Trend</h2>
-                  <p>Revenue dan expense 7 hari terakhir</p>
-                </div>
-
-                <div class="bh-legend">
-                  <span><i class="bh-dot bh-rev"></i>Revenue</span>
-                  <span><i class="bh-dot bh-exp"></i>Expense</span>
-                </div>
+        <div class="bh4-grid-main">
+          <section class="bh4-card">
+            <div class="bh4-card-head">
+              <div>
+                <h3 class="bh4-card-title">Revenue vs Expenses</h3>
+                <p class="bh4-card-desc">Pergerakan keuangan 7 hari terakhir</p>
               </div>
-
-              <div class="bh-chart">
-                ${chartBars.map(day => `
-                  <div class="bh-day">
-                    <div class="bh-bars">
-                      <div
-                        class="bh-bar bh-rev"
-                        title="Revenue: ${money(day.revenue)}"
-                        style="height:${Math.max(3, (day.revenue / maxChart) * 180)}px">
-                      </div>
-
-                      <div
-                        class="bh-bar bh-exp"
-                        title="Expense: ${money(day.expense)}"
-                        style="height:${Math.max(3, (day.expense / maxChart) * 180)}px">
-                      </div>
-                    </div>
-                    <div class="bh-day-label">${esc(day.label)}</div>
-                  </div>
-                `).join("")}
-              </div>
-            </section>
-
-            <div class="bh-two">
-
-              <section class="bh-card">
-                <div class="bh-card-head">
-                  <div>
-                    <h2>Top Products</h2>
-                    <p>Produk berdasarkan revenue</p>
-                  </div>
-                  <button class="bh-link" data-bh-page="products">View →</button>
-                </div>
-
-                ${
-                  topProducts.length
-                    ? topProducts.map((p, i) => `
-                      <div class="bh-row">
-                        <div class="bh-row-main">
-                          <strong>${i + 1}. ${esc(p.name)}</strong>
-                          <span>${p.qty} unit terjual</span>
-                        </div>
-                        <div class="bh-row-value">${compact(p.revenue)}</div>
-                      </div>
-                    `).join("")
-                    : `<div class="bh-empty">Belum ada data penjualan.</div>`
-                }
-              </section>
-
-              <section class="bh-card">
-                <div class="bh-card-head">
-                  <div>
-                    <h2>Top Customers</h2>
-                    <p>Customer berdasarkan revenue</p>
-                  </div>
-                  <button class="bh-link" data-bh-page="customers">View →</button>
-                </div>
-
-                ${
-                  topCustomers.length
-                    ? topCustomers.map((c, i) => `
-                      <div class="bh-row">
-                        <div class="bh-row-main">
-                          <strong>${i + 1}. ${esc(c.name)}</strong>
-                          <span>${c.orders} order</span>
-                        </div>
-                        <div class="bh-row-value">${compact(c.revenue)}</div>
-                      </div>
-                    `).join("")
-                    : `<div class="bh-empty">Belum ada data customer.</div>`
-                }
-              </section>
-
             </div>
 
-            <section class="bh-card">
-              <div class="bh-card-head">
-                <div>
-                  <h2>Recent Activity</h2>
-                  <p>Aktivitas keuangan dan penjualan terbaru</p>
-                </div>
-                <button class="bh-link" data-bh-page="finance">View Finance →</button>
+            <div class="bh4-chart">${chart}</div>
+
+            <div class="bh4-legend">
+              <span><i class="bh4-dot" style="background:#2563eb"></i>Revenue</span>
+              <span><i class="bh4-dot" style="background:#d9dee7"></i>Expenses</span>
+            </div>
+          </section>
+
+          <section class="bh4-card">
+            <div class="bh4-card-head">
+              <div>
+                <h3 class="bh4-card-title">Sales Performance</h3>
+                <p class="bh4-card-desc">Progress terhadap target revenue</p>
               </div>
+            </div>
 
-              ${
-                recent.length
-                  ? `<div style="overflow:auto">
-                    <table class="bh-table">
-                      <thead>
-                        <tr>
-                          <th>Date</th>
-                          <th>Activity</th>
-                          <th>Type</th>
-                          <th>Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${recent.map(r => `
-                          <tr>
-                            <td>${esc(r.date)}</td>
-                            <td><strong>${esc(r.description)}</strong></td>
-                            <td class="bh-type">${esc(r.type)}</td>
-                            <td>${money(r.amount)}</td>
-                          </tr>
-                        `).join("")}
-                      </tbody>
-                    </table>
-                  </div>`
-                  : `<div class="bh-empty">Belum ada aktivitas.</div>`
-              }
-            </section>
-
-          </div>
-
-          <div>
-
-            <section class="bh-card">
-              <div class="bh-card-head">
-                <div>
-                  <h2>Opportunity Center</h2>
-                  <p>Area yang membutuhkan perhatian</p>
-                </div>
-                <button class="bh-link" data-bh-page="opportunities">All →</button>
+            <div class="bh4-progress-wrap">
+              <div class="bh4-progress-label">
+                <span>${money(salesRevenue)}</span>
+                <span>${targetPct.toFixed(0)}%</span>
               </div>
-
-              ${opportunities.map(o => `
-                <div class="bh-op ${o.type}">
-                  <div class="bh-op-icon">${o.icon}</div>
-                  <div>
-                    <strong>${esc(o.title)}</strong>
-                    <p>${esc(o.text)}</p>
-                    <button class="bh-link" data-bh-page="${esc(o.page)}">Take Action →</button>
-                  </div>
-                </div>
-              `).join("")}
-            </section>
-
-            <section class="bh-card">
-              <div class="bh-card-head">
-                <div>
-                  <h2>Performance</h2>
-                  <p>Progress terhadap target revenue</p>
-                </div>
+              <div class="bh4-progress">
+                <span style="width:${targetPct}%"></span>
               </div>
+              <div class="bh4-kpi-foot">Target ${money(target)}</div>
+            </div>
 
-              <div style="font-size:30px;font-weight:800">
-                ${achievement.toFixed(0)}%
-              </div>
-
-              <div class="bh-progress">
-                <i style="width:${Math.min(100, Math.max(0, achievement))}%"></i>
-              </div>
-
-              <div style="display:flex;justify-content:space-between;margin-top:9px;font-size:11px;color:#98a2b3">
-                <span>${compact(revenue)}</span>
-                <span>Target ${compact(revenueTarget)}</span>
-              </div>
-            </section>
-
-            <section class="bh-card">
-              <div class="bh-card-head">
-                <div>
-                  <h2>Operational Snapshot</h2>
-                  <p>Status bisnis saat ini</p>
-                </div>
-              </div>
-
-              <div class="bh-snapshot">
-                <div class="bh-mini">
-                  <span>Products</span>
-                  <strong>${products.length}</strong>
-                </div>
-
-                <div class="bh-mini">
-                  <span>Low Stock</span>
-                  <strong>${lowStock.length}</strong>
-                </div>
-
-                <div class="bh-mini">
-                  <span>Customers</span>
-                  <strong>${customers.length}</strong>
-                </div>
-              </div>
-
-              <div style="margin-top:14px;padding-top:14px;border-top:1px solid #eef0f4">
-                <span style="font-size:11px;color:#98a2b3">Inventory Value</span>
-                <strong style="display:block;margin-top:4px">${compact(inventoryValue)}</strong>
-              </div>
-            </section>
-
-          </div>
+            <div class="bh4-margin">
+              <div class="bh4-margin-value">${margin.toFixed(1)}%</div>
+              <div class="bh4-margin-label">Net Profit Margin</div>
+            </div>
+          </section>
         </div>
 
-        <section class="bh-card">
-          <div class="bh-card-head">
+        <div class="bh4-card" style="margin-bottom:16px">
+          <div class="bh4-card-head">
             <div>
-              <h2>Quick Actions</h2>
-              <p>Akses cepat ke aktivitas utama bisnis</p>
+              <h3 class="bh4-card-title">Opportunity Center</h3>
+              <p class="bh4-card-desc">Area yang membutuhkan perhatian atau tindakan</p>
             </div>
           </div>
+          ${opportunityHtml}
+        </div>
 
-          <div class="bh-actions">
-            <button class="bh-action" data-bh-page="finance">＋ Transaction</button>
-            <button class="bh-action" data-bh-page="sales">＋ New Sale</button>
-            <button class="bh-action" data-bh-page="customers">＋ Customer</button>
-            <button class="bh-action" data-bh-page="products">＋ Product / Stock</button>
+        <div class="bh4-two">
+          <section class="bh4-card">
+            <div class="bh4-card-head">
+              <div>
+                <h3 class="bh4-card-title">Top Products</h3>
+                <p class="bh4-card-desc">Produk berdasarkan jumlah terjual</p>
+              </div>
+              <button class="bh4-op-link" data-page="products">View all</button>
+            </div>
+            <div class="bh4-list">${productsHtml}</div>
+          </section>
+
+          <section class="bh4-card">
+            <div class="bh4-card-head">
+              <div>
+                <h3 class="bh4-card-title">Top Customers</h3>
+                <p class="bh4-card-desc">Customer berdasarkan revenue</p>
+              </div>
+              <button class="bh4-op-link" data-page="customers">View all</button>
+            </div>
+            <div class="bh4-list">${customersHtml}</div>
+          </section>
+        </div>
+
+        <section class="bh4-card" style="margin-bottom:16px">
+          <div class="bh4-card-head">
+            <div>
+              <h3 class="bh4-card-title">Recent Transactions</h3>
+              <p class="bh4-card-desc">Aktivitas keuangan terbaru</p>
+            </div>
+            <button class="bh4-op-link" data-page="transactions">View all</button>
+          </div>
+
+          <div style="overflow-x:auto">
+            <table class="bh4-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Category</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>${recentHtml}</tbody>
+            </table>
           </div>
         </section>
 
+        <div class="bh4-actions">
+          <button class="bh4-action" data-page="transactions">
+            <div class="bh4-action-icon">＋</div>
+            <div class="bh4-action-title">Transaction</div>
+            <div class="bh4-action-desc">Catat pemasukan / pengeluaran</div>
+          </button>
+
+          <button class="bh4-action" data-page="sales">
+            <div class="bh4-action-icon">↗</div>
+            <div class="bh4-action-title">Sales</div>
+            <div class="bh4-action-desc">Lihat performa penjualan</div>
+          </button>
+
+          <button class="bh4-action" data-page="customers">
+            <div class="bh4-action-icon">♙</div>
+            <div class="bh4-action-title">Customer</div>
+            <div class="bh4-action-desc">Kelola customer</div>
+          </button>
+
+          <button class="bh4-action" data-page="products">
+            <div class="bh4-action-icon">▦</div>
+            <div class="bh4-action-title">Products</div>
+            <div class="bh4-action-desc">Produk dan inventory</div>
+          </button>
+
+          <button class="bh4-action" data-page="opportunities">
+            <div class="bh4-action-icon">✦</div>
+            <div class="bh4-action-title">Insights</div>
+            <div class="bh4-action-desc">Lihat peluang bisnis</div>
+          </button>
+        </div>
       </div>
     `;
 
-    const period = document.getElementById("bh-period");
-    if (period) {
-      period.value = String(currentPeriod);
-      period.addEventListener("change", function () {
-        currentPeriod = Number(this.value) || 30;
-        renderDashboard();
+    content.querySelectorAll("[data-page]").forEach(el => {
+      el.addEventListener("click", () => {
+        const page = el.dataset.page;
+        const target = document.querySelector('[data-page="' + page + '"]');
+        if (target) target.click();
+      });
+    });
+
+    const quickToggle = document.getElementById("bh4-quick-toggle");
+    if (quickToggle) {
+      quickToggle.addEventListener("click", function () {
+        const actions = content.querySelector(".bh4-actions");
+        if (actions) {
+          actions.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+          });
+        }
       });
     }
 
-    document.getElementById("bh-refresh")?.addEventListener(
-      "click",
-      renderDashboard
-    );
+    const refresh = document.getElementById("bh4-refresh");
 
-    content.querySelectorAll("[data-bh-page]").forEach(button => {
-      button.addEventListener("click", function () {
-        navigate(this.dataset.bhPage);
+    if (refresh) {
+      refresh.addEventListener("click", function () {
+        refresh.disabled = true;
+        refresh.innerHTML = "↻ Refreshing...";
+
+        try {
+          // Re-read semua sumber data dari localStorage
+          // lalu render ulang Dashboard tanpa reload halaman.
+          renderDashboard();
+        } finally {
+          setTimeout(function () {
+            const btn = document.getElementById("bh4-refresh");
+            if (btn) {
+              btn.disabled = false;
+              btn.innerHTML = "↻ Refresh";
+            }
+          }, 250);
+        }
       });
-    });
+    }
   }
 
-  /*
-   * Expose BOTH names.
-   * Router lama menggunakan renderDashboard.
-   * Handler sebelumnya menggunakan renderLiveDashboard.
-   */
   window.renderDashboard = renderDashboard;
   window.renderLiveDashboard = renderDashboard;
 
-  renderDashboard();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () {
+      const activePage = document.querySelector(".nav-item.active[data-page]");
+      if (!activePage || activePage.dataset.page === "dashboard") {
+        renderDashboard();
+      }
+    });
+  } else {
+    const activePage = document.querySelector(".nav-item.active[data-page]");
+    if (!activePage || activePage.dataset.page === "dashboard") {
+      renderDashboard();
+    }
+  }
 })();
 
 /* =========================================================
@@ -9081,4 +9312,6416 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   );
 
+})();
+
+/* =========================================================
+   PROFILE SYNC FINAL V4
+   ONE PHOTO -> LEFT + RIGHT
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const KEY = "businessHubProfilePhoto";
+
+  function getLeft() {
+    return document.getElementById("sideProfileAvatar");
+  }
+
+  function getRight() {
+    return document.getElementById("topProfileAvatar");
+  }
+
+  function apply(photo) {
+    const left = getLeft();
+    const right = getRight();
+
+    [left, right].forEach(function (avatar) {
+      if (!avatar) return;
+
+      if (photo) {
+        avatar.textContent = "";
+        avatar.style.backgroundImage = "url(" + JSON.stringify(photo) + ")";
+        avatar.style.backgroundSize = "cover";
+        avatar.style.backgroundPosition = "center";
+        avatar.style.backgroundRepeat = "no-repeat";
+        avatar.style.color = "transparent";
+        avatar.style.overflow = "hidden";
+      } else {
+        avatar.textContent = "BH";
+        avatar.style.backgroundImage = "none";
+        avatar.style.backgroundSize = "";
+        avatar.style.backgroundPosition = "";
+        avatar.style.backgroundRepeat = "";
+        avatar.style.color = "";
+      }
+    });
+  }
+
+  function load() {
+    apply(localStorage.getItem(KEY));
+  }
+
+  function openPicker() {
+    const input = document.getElementById("profilePhotoInput");
+    if (input) {
+      input.value = "";
+      input.click();
+    }
+  }
+
+  function setup() {
+    const input = document.getElementById("profilePhotoInput");
+
+    // Klik avatar kiri ATAU kanan
+    document.addEventListener("click", function (event) {
+      const left = event.target.closest("#sideProfileAvatar");
+      const right = event.target.closest("#topProfileAvatar");
+
+      if (left || right) {
+        event.preventDefault();
+        event.stopPropagation();
+        openPicker();
+      }
+    }, true);
+
+    // Satu-satunya handler upload
+    if (input) {
+      input.addEventListener("change", function () {
+        const file = input.files && input.files[0];
+
+        if (!file) return;
+
+        if (!file.type || !file.type.startsWith("image/")) {
+          alert("Silakan pilih file gambar.");
+          input.value = "";
+          return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+          const photo = event.target.result;
+
+          try {
+            localStorage.setItem(KEY, photo);
+          } catch (error) {
+            alert("Foto terlalu besar untuk disimpan.");
+            return;
+          }
+
+          // Langsung update KEDUA avatar
+          apply(photo);
+        };
+
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Load foto saat halaman dibuka
+    load();
+
+    // Pastikan jika DOM berubah/render ulang,
+    // kedua avatar tetap memakai foto yang sama.
+    const observer = new MutationObserver(function () {
+      const photo = localStorage.getItem(KEY);
+
+      if (photo) {
+        apply(photo);
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setup, { once: true });
+  } else {
+    setup();
+  }
+
+  // Sinkronisasi antar-tab/window
+  window.addEventListener("storage", function (event) {
+    if (event.key === KEY) {
+      apply(event.newValue);
+    }
+  });
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — SIDEBAR AVATAR SYNC
+   ========================================================= */
+(function () {
+  const KEY = "businessHubProfilePhoto";
+
+  function syncSidebarAvatar() {
+    const photo = localStorage.getItem(KEY);
+    const avatar = document.getElementById("sideProfileAvatar");
+
+    if (!avatar) return;
+
+    if (photo) {
+      avatar.textContent = "";
+      avatar.style.backgroundImage = "url(" + JSON.stringify(photo) + ")";
+      avatar.style.backgroundSize = "cover";
+      avatar.style.backgroundPosition = "center";
+      avatar.style.backgroundRepeat = "no-repeat";
+      avatar.style.color = "transparent";
+    } else {
+      avatar.textContent = "BH";
+      avatar.style.backgroundImage = "none";
+      avatar.style.color = "";
+    }
+  }
+
+  function init() {
+    syncSidebarAvatar();
+
+    const input = document.getElementById("profilePhotoInput");
+    if (input) {
+      input.addEventListener("change", function () {
+        setTimeout(syncSidebarAvatar, 50);
+      });
+    }
+
+    window.addEventListener("storage", function (event) {
+      if (event.key === KEY) {
+        syncSidebarAvatar();
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — BRAND PROFILE SYNC
+   ========================================================= */
+(function () {
+  const KEY = "businessHubProfilePhoto";
+
+  function syncBrandPhoto() {
+    const brand = document.querySelector(".brand-mark");
+    const photo = localStorage.getItem(KEY);
+
+    if (!brand) return;
+
+    brand.classList.add("profile-brand-photo");
+
+    if (photo) {
+      brand.textContent = "";
+      brand.style.backgroundImage = "url(" + JSON.stringify(photo) + ")";
+    } else {
+      brand.textContent = "B";
+      brand.style.backgroundImage = "none";
+    }
+  }
+
+  function setupBrandPhoto() {
+    syncBrandPhoto();
+
+    const input = document.getElementById("profilePhotoInput");
+
+    if (input) {
+      input.addEventListener("change", function () {
+        setTimeout(syncBrandPhoto, 100);
+      });
+    }
+
+    window.addEventListener("storage", function (event) {
+      if (event.key === KEY) {
+        syncBrandPhoto();
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupBrandPhoto, {
+      once: true
+    });
+  } else {
+    setupBrandPhoto();
+  }
+})();
+
+/* =========================================================
+   NOTIFICATION CENTER V1
+   ========================================================= */
+(function () {
+  const TX_KEY = "businessHubTransactions";
+  const SALES_KEY = "businessHubSalesSafe";
+  const PRODUCTS_KEY = "businessHubProductsV3";
+  const TARGET_KEY = "businessHubSalesTargetsV1";
+
+  function read(key) {
+    try {
+      return JSON.parse(localStorage.getItem(key) || "[]");
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function buildNotifications() {
+    const notifications = [];
+
+    const products = read(PRODUCTS_KEY);
+    const sales = read(SALES_KEY);
+    const transactions = read(TX_KEY);
+
+    // LOW STOCK
+    products.forEach(function (product) {
+      const stock = Number(product.stock || 0);
+      const target = Number(
+        product.target ||
+        product.targetStock ||
+        10
+      );
+
+      if (stock <= target) {
+        notifications.push({
+          icon: "📦",
+          title: "Stok rendah",
+          text:
+            String(product.name || "Produk") +
+            " tersisa " +
+            stock +
+            " unit."
+        });
+      }
+    });
+
+    // SALES TARGET
+    let target = null;
+
+    try {
+      target = JSON.parse(
+        localStorage.getItem(TARGET_KEY) || "null"
+      );
+    } catch (e) {}
+
+    if (target) {
+      const month = String(target.month || "");
+      const revenueTarget = Number(target.revenueTarget || 0);
+
+      if (revenueTarget > 0) {
+        const revenue = sales.reduce(function (sum, sale) {
+          return sum + Number(sale.amount || 0);
+        }, 0);
+
+        const achievement =
+          (revenue / revenueTarget) * 100;
+
+        if (achievement < 70) {
+          notifications.push({
+            icon: "🎯",
+            title: "Target sales masih rendah",
+            text:
+              "Pencapaian revenue bulan " +
+              month +
+              " baru " +
+              achievement.toFixed(0) +
+              "%."
+          });
+        }
+      }
+    }
+
+    // EXPENSE / PROFIT ALERT
+    let income = 0;
+    let expense = 0;
+
+    transactions.forEach(function (tx) {
+      const amount = Number(tx.amount || 0);
+
+      if (
+        tx.type === "income" ||
+        tx.type === "revenue"
+      ) {
+        income += amount;
+      }
+
+      if (tx.type === "expense") {
+        expense += amount;
+      }
+    });
+
+    if (income > 0 && expense / income >= 0.6) {
+      notifications.push({
+        icon: "⚠️",
+        title: "Expense tinggi",
+        text:
+          "Expense sudah mencapai " +
+          ((expense / income) * 100).toFixed(0) +
+          "% dari revenue."
+      });
+    }
+
+    // RECENT SALES
+    if (sales.length > 0) {
+      const latest = sales[0];
+
+      notifications.push({
+        icon: "💰",
+        title: "Penjualan terbaru",
+        text:
+          String(latest.product || "Produk") +
+          " — " +
+          String(latest.customer || "Customer")
+      });
+    }
+
+    return notifications.slice(0, 8);
+  }
+
+  function closeCenter() {
+    const existing =
+      document.getElementById("notificationCenter");
+
+    if (existing) existing.remove();
+  }
+
+  function renderCenter() {
+    closeCenter();
+
+    const notifications = buildNotifications();
+
+    const panel = document.createElement("div");
+    panel.id = "notificationCenter";
+    panel.className = "notification-center";
+
+    let html = `
+      <div class="notification-center-head">
+        <strong>Notifications</strong>
+        <span class="notification-count">
+          ${notifications.length}
+        </span>
+      </div>
+      <div class="notification-list">
+    `;
+
+    if (!notifications.length) {
+      html += `
+        <div class="notification-empty">
+          ✓ Tidak ada notifikasi penting
+        </div>
+      `;
+    } else {
+      notifications.forEach(function (item) {
+        html += `
+          <div class="notification-item">
+            <div class="notification-icon">${item.icon}</div>
+            <div>
+              <strong>${item.title}</strong>
+              <span>${item.text}</span>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    html += `
+      </div>
+      <div class="notification-footer">
+        Data diperbarui dari aktivitas dashboard
+      </div>
+    `;
+
+    panel.innerHTML = html;
+    document.body.appendChild(panel);
+  }
+
+  function setup() {
+    const button =
+      document.getElementById("notificationButton");
+
+    if (!button) return;
+
+    button.addEventListener("click", function (event) {
+      event.stopPropagation();
+
+      const existing =
+        document.getElementById("notificationCenter");
+
+      if (existing) {
+        closeCenter();
+      } else {
+        renderCenter();
+      }
+    });
+
+    document.addEventListener("click", function (event) {
+      const panel =
+        document.getElementById("notificationCenter");
+
+      if (
+        panel &&
+        !panel.contains(event.target) &&
+        !event.target.closest("#notificationButton")
+      ) {
+        closeCenter();
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      setup,
+      { once: true }
+    );
+  } else {
+    setup();
+  }
+})();
+
+/* =========================================================
+   NOTIFICATION POLISH V2 — BADGE SYNC
+   ========================================================= */
+(function () {
+  "use strict";
+
+  function updateNotificationBadge() {
+    const panel = document.querySelector(".notification-center");
+    const button = document.getElementById("notificationButton");
+    const countEl = document.getElementById("notificationCount");
+
+    if (!button || !countEl) return;
+
+    let count = 0;
+
+    if (panel) {
+      count = panel.querySelectorAll(".notification-item").length;
+    }
+
+    if (count > 99) count = 99;
+
+    countEl.textContent = count > 99 ? "99+" : String(count);
+
+    if (count > 0) {
+      countEl.classList.add("show");
+      button.classList.add("has-alert");
+    } else {
+      countEl.classList.remove("show");
+      button.classList.remove("has-alert");
+    }
+  }
+
+  function refreshBadge() {
+    setTimeout(updateNotificationBadge, 80);
+  }
+
+  document.addEventListener("DOMContentLoaded", refreshBadge);
+
+  document.addEventListener("click", function (e) {
+    if (
+      e.target.closest("#notificationButton") ||
+      e.target.closest(".notification-center")
+    ) {
+      setTimeout(updateNotificationBadge, 80);
+    }
+  });
+
+  window.addEventListener("storage", refreshBadge);
+
+  const observer = new MutationObserver(function () {
+    updateNotificationBadge();
+  });
+
+  function startObserver() {
+    const panel = document.querySelector(".notification-center");
+
+    if (panel) {
+      observer.observe(panel, {
+        childList: true,
+        subtree: true
+      });
+
+      updateNotificationBadge();
+    } else {
+      setTimeout(startObserver, 300);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startObserver);
+  } else {
+    startObserver();
+  }
+})();
+
+/* =========================================================
+   NOTIFICATION ROUTING V1
+   Klik notifikasi -> langsung ke halaman terkait
+   ========================================================= */
+(function () {
+  "use strict";
+
+  function goToPage(page) {
+    if (!page) return;
+
+    const nav = document.querySelector('[data-page="' + page + '"]');
+
+    if (nav) {
+      nav.click();
+      return;
+    }
+
+    if (typeof window.renderModule === "function") {
+      window.renderModule(page);
+    }
+  }
+
+  function getNotificationTarget(item) {
+    if (!item) return null;
+
+    const text = (item.innerText || item.textContent || "").toLowerCase();
+
+    /*
+     * Tentukan tujuan berdasarkan isi notifikasi.
+     */
+
+    if (
+      text.includes("stok") ||
+      text.includes("stock") ||
+      text.includes("product") ||
+      text.includes("produk")
+    ) {
+      return "products";
+    }
+
+    if (
+      text.includes("target") ||
+      text.includes("sales") ||
+      text.includes("penjualan") ||
+      text.includes("revenue")
+    ) {
+      return "sales";
+    }
+
+    if (
+      text.includes("expense") ||
+      text.includes("pengeluaran")
+    ) {
+      return "expenses";
+    }
+
+    if (
+      text.includes("profit") ||
+      text.includes("laba") ||
+      text.includes("rugi") ||
+      text.includes("transaksi")
+    ) {
+      return "finance";
+    }
+
+    if (
+      text.includes("customer") ||
+      text.includes("pelanggan")
+    ) {
+      return "customers";
+    }
+
+    return "dashboard";
+  }
+
+  function setupNotificationRouting() {
+    const panel = document.querySelector(".notification-center");
+
+    if (!panel || panel.dataset.routingReady === "1") return;
+
+    panel.dataset.routingReady = "1";
+
+    panel.addEventListener("click", function (e) {
+      const item = e.target.closest(".notification-item");
+
+      if (!item) return;
+
+      const target =
+        item.dataset.page ||
+        item.dataset.target ||
+        getNotificationTarget(item);
+
+      if (!target) return;
+
+      /*
+       * Tandai sebagai sudah dibaca jika sistem
+       * notification center memiliki class unread.
+       */
+      item.classList.remove("unread");
+      item.classList.add("notification-read");
+
+      /*
+       * Tutup notification center sebelum pindah halaman.
+       */
+      panel.style.display = "none";
+
+      const button = document.getElementById("notificationButton");
+
+      if (button) {
+        button.setAttribute("aria-expanded", "false");
+      }
+
+      /*
+       * Beri sedikit waktu agar dropdown tertutup
+       * sebelum navigasi.
+       */
+      setTimeout(function () {
+        goToPage(target);
+      }, 50);
+    });
+  }
+
+  function watchNotificationPanel() {
+    setupNotificationRouting();
+
+    setTimeout(watchNotificationPanel, 500);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", watchNotificationPanel);
+  } else {
+    watchNotificationPanel();
+  }
+
+})();
+
+/* =========================================================
+   NOTIFICATION ENGINE V2
+   - unread / read
+   - persistent read state
+   - contextual page routing
+   - badge hanya unread
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const READ_KEY = "businessHubNotificationsReadV2";
+
+  function getReadMap() {
+    try {
+      return JSON.parse(localStorage.getItem(READ_KEY) || "{}");
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveReadMap(map) {
+    localStorage.setItem(READ_KEY, JSON.stringify(map));
+  }
+
+  function makeId(text) {
+    let hash = 0;
+    const value = String(text || "");
+
+    for (let i = 0; i < value.length; i++) {
+      hash = ((hash << 5) - hash) + value.charCodeAt(i);
+      hash |= 0;
+    }
+
+    return "notif-" + Math.abs(hash);
+  }
+
+  function detectPage(text) {
+    const t = String(text || "").toLowerCase();
+
+    if (
+      t.includes("stok") ||
+      t.includes("stock") ||
+      t.includes("product") ||
+      t.includes("produk")
+    ) return "products";
+
+    if (
+      t.includes("target") ||
+      t.includes("sales") ||
+      t.includes("penjualan") ||
+      t.includes("revenue")
+    ) return "sales";
+
+    if (
+      t.includes("expense") ||
+      t.includes("pengeluaran")
+    ) return "expenses";
+
+    if (
+      t.includes("customer") ||
+      t.includes("pelanggan")
+    ) return "customers";
+
+    if (
+      t.includes("profit") ||
+      t.includes("laba") ||
+      t.includes("rugi") ||
+      t.includes("transaksi") ||
+      t.includes("finance")
+    ) return "finance";
+
+    return "dashboard";
+  }
+
+  function decorateNotifications() {
+    const panel = document.querySelector(".notification-center");
+    if (!panel) return;
+
+    const readMap = getReadMap();
+    const items = panel.querySelectorAll(".notification-item");
+
+    items.forEach(function (item) {
+      const text = (item.innerText || item.textContent || "").trim();
+      if (!text) return;
+
+      const id = makeId(text);
+
+      item.dataset.notificationId = id;
+      item.dataset.page = item.dataset.page || detectPage(text);
+
+      if (readMap[id]) {
+        item.classList.remove("unread");
+        item.classList.add("notification-read");
+        item.dataset.read = "1";
+      } else {
+        item.classList.add("unread");
+        item.classList.remove("notification-read");
+        item.dataset.read = "0";
+      }
+    });
+
+    updateUnreadBadge();
+  }
+
+  function updateUnreadBadge() {
+    const panel = document.querySelector(".notification-center");
+    const count = document.getElementById("notificationCount");
+    const button = document.getElementById("notificationButton");
+
+    if (!count || !button) return;
+
+    let unread = 0;
+
+    if (panel) {
+      unread = panel.querySelectorAll(
+        '.notification-item.unread:not([data-read="1"])'
+      ).length;
+    }
+
+    count.textContent = unread > 99 ? "99+" : String(unread);
+
+    if (unread > 0) {
+      count.classList.add("show");
+      button.classList.add("has-alert");
+    } else {
+      count.classList.remove("show");
+      button.classList.remove("has-alert");
+    }
+  }
+
+  function markRead(item) {
+    if (!item) return;
+
+    const id = item.dataset.notificationId;
+    if (!id) return;
+
+    const readMap = getReadMap();
+    readMap[id] = Date.now();
+    saveReadMap(readMap);
+
+    item.classList.remove("unread");
+    item.classList.add("notification-read");
+    item.dataset.read = "1";
+
+    updateUnreadBadge();
+  }
+
+  function routeToPage(page) {
+    if (!page) return;
+
+    const nav = document.querySelector('[data-page="' + page + '"]');
+
+    if (nav) {
+      nav.click();
+      return;
+    }
+
+    if (typeof window.renderModule === "function") {
+      window.renderModule(page);
+    }
+  }
+
+  function setupClickHandler() {
+    const panel = document.querySelector(".notification-center");
+
+    if (!panel || panel.dataset.engineV2 === "1") return;
+
+    panel.dataset.engineV2 = "1";
+
+    panel.addEventListener("click", function (e) {
+      const item = e.target.closest(".notification-item");
+
+      if (!item) return;
+
+      const page =
+        item.dataset.page ||
+        detectPage(item.innerText || item.textContent);
+
+      markRead(item);
+
+      setTimeout(function () {
+        panel.style.display = "none";
+
+        const button = document.getElementById("notificationButton");
+
+        if (button) {
+          button.setAttribute("aria-expanded", "false");
+        }
+
+        routeToPage(page);
+      }, 60);
+    });
+  }
+
+  function init() {
+    decorateNotifications();
+    setupClickHandler();
+    updateUnreadBadge();
+  }
+
+  const observer = new MutationObserver(function () {
+    init();
+  });
+
+  function start() {
+    init();
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
+
+  window.refreshNotificationEngine = init;
+
+})();
+
+/* =========================================================
+   NOTIFICATION ENGINE V3
+   REAL EVENT MONITOR
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const EVENTS_KEY = "businessHubNotificationEventsV3";
+
+  const STORAGE = {
+    sales: "businessHubSalesSafe",
+    transactions: "businessHubTransactions",
+    products: "businessHubProductsV3",
+    customers: "businessHubCustomersSafe",
+    target: "businessHubSalesTargetsV1"
+  };
+
+  function read(key, fallback) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key));
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeEvents(events) {
+    localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
+  }
+
+  function getEvents() {
+    return read(EVENTS_KEY, {});
+  }
+
+  function makeEventId(type, id) {
+    return "event-" + type + "-" + String(id);
+  }
+
+  function getArray(key) {
+    const value = read(key, []);
+    return Array.isArray(value) ? value : [];
+  }
+
+  function pushEvent(type, id, title, description, page, icon) {
+    const events = getEvents();
+    const eventId = makeEventId(type, id);
+
+    if (events[eventId]) return false;
+
+    events[eventId] = {
+      id: eventId,
+      type: type,
+      title: title,
+      description: description,
+      page: page,
+      icon: icon || "•",
+      createdAt: Date.now()
+    };
+
+    writeEvents(events);
+
+    return true;
+  }
+
+  function scanSales() {
+    const sales = getArray(STORAGE.sales);
+
+    sales.forEach(function (sale) {
+      const id = sale.id || sale.date + "-" + sale.customer + "-" + sale.product;
+
+      pushEvent(
+        "sale",
+        id,
+        "Penjualan baru",
+        (sale.product || "Produk") +
+          " — " +
+          (sale.customer || "Customer"),
+        "sales",
+        "🛒"
+      );
+    });
+  }
+
+  function scanTransactions() {
+    const transactions = getArray(STORAGE.transactions);
+
+    transactions.forEach(function (tx) {
+      const id =
+        tx.id ||
+        tx.date + "-" +
+        tx.description + "-" +
+        tx.amount;
+
+      pushEvent(
+        "transaction",
+        id,
+        tx.type === "expense"
+          ? "Pengeluaran baru"
+          : "Transaksi pemasukan",
+        tx.description ||
+          tx.category ||
+          "Transaksi Finance",
+        tx.type === "expense"
+          ? "expenses"
+          : "finance",
+        tx.type === "expense" ? "💸" : "💰"
+      );
+    });
+  }
+
+  function scanProducts() {
+    const products = getArray(STORAGE.products);
+
+    products.forEach(function (product) {
+      const stock = Number(product.stock || 0);
+      const target = Number(
+        product.target ||
+        product.targetStock ||
+        0
+      );
+
+      if (target > 0 && stock <= target) {
+        const id =
+          product.sku ||
+          product.id ||
+          product.name;
+
+        pushEvent(
+          "low-stock",
+          id,
+          "Stok rendah",
+          (product.name || "Produk") +
+            " tersisa " +
+            stock +
+            " unit",
+          "products",
+          "📦"
+        );
+      }
+    });
+  }
+
+  function scanCustomers() {
+    const customers = getArray(STORAGE.customers);
+
+    customers.forEach(function (customer) {
+      const id =
+        customer.id ||
+        customer.name ||
+        customer.company;
+
+      pushEvent(
+        "customer",
+        id,
+        "Customer tersedia",
+        customer.name ||
+          customer.company ||
+          "Customer baru",
+        "customers",
+        "👥"
+      );
+    });
+  }
+
+  function scanSalesTarget() {
+    const target = read(STORAGE.target, null);
+
+    if (!target) return;
+
+    const sales = getArray(STORAGE.sales);
+
+    const month = target.month ||
+      new Date().toISOString().slice(0, 7);
+
+    const monthSales = sales.filter(function (sale) {
+      const date = String(sale.date || "");
+
+      return date.includes(month);
+    });
+
+    const revenue = monthSales.reduce(function (sum, sale) {
+      return sum + Number(sale.amount || 0);
+    }, 0);
+
+    const targetRevenue = Number(
+      target.revenueTarget || 0
+    );
+
+    if (targetRevenue <= 0) return;
+
+    const achievement =
+      revenue / targetRevenue * 100;
+
+    if (achievement < 70) {
+      pushEvent(
+        "sales-target",
+        month,
+        "Target sales tertinggal",
+        "Pencapaian revenue baru " +
+          achievement.toFixed(0) +
+          "% dari target",
+        "sales",
+        "🎯"
+      );
+    }
+  }
+
+  function scanFinanceHealth() {
+    const transactions =
+      getArray(STORAGE.transactions);
+
+    const revenue = transactions
+      .filter(function (tx) {
+        return tx.type === "income";
+      })
+      .reduce(function (sum, tx) {
+        return sum + Number(tx.amount || 0);
+      }, 0);
+
+    const expenses = transactions
+      .filter(function (tx) {
+        return tx.type === "expense";
+      })
+      .reduce(function (sum, tx) {
+        return sum + Number(tx.amount || 0);
+      }, 0);
+
+    if (revenue > 0) {
+      const expenseRatio =
+        expenses / revenue * 100;
+
+      if (expenseRatio >= 60) {
+        pushEvent(
+          "expense-health",
+          "current",
+          "Expense tinggi",
+          "Expense mencapai " +
+            expenseRatio.toFixed(0) +
+            "% dari revenue",
+          "expenses",
+          "⚠️"
+        );
+      }
+    }
+
+    if (expenses > revenue && expenses > 0) {
+      pushEvent(
+        "negative-profit",
+        "current",
+        "Profit negatif",
+        "Total expense saat ini lebih besar dari revenue",
+        "finance",
+        "🔴"
+      );
+    }
+  }
+
+  function cleanOldEvents() {
+    const events = getEvents();
+    const now = Date.now();
+    const maxAge = 30 * 24 * 60 * 60 * 1000;
+
+    Object.keys(events).forEach(function (id) {
+      if (
+        now - Number(events[id].createdAt || 0) >
+        maxAge
+      ) {
+        delete events[id];
+      }
+    });
+
+    writeEvents(events);
+  }
+
+  function runScan() {
+    scanSales();
+    scanTransactions();
+    scanProducts();
+    scanCustomers();
+    scanSalesTarget();
+    scanFinanceHealth();
+    cleanOldEvents();
+
+    if (
+      typeof window.refreshNotificationEngine ===
+      "function"
+    ) {
+      window.refreshNotificationEngine();
+    }
+  }
+
+  /*
+   * Jalankan setelah aplikasi selesai load.
+   */
+  function start() {
+    setTimeout(runScan, 500);
+
+    /*
+     * Cek kembali setiap 10 detik.
+     * Tidak membuat duplikat karena setiap event
+     * memiliki ID unik.
+     */
+    setInterval(runScan, 10000);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+  window.runNotificationScanV3 = runScan;
+
+})();
+
+/* =========================================================
+   NOTIFICATION ENGINE V4
+   BASELINE + NEW EVENT DETECTION
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const BASELINE_KEY = "businessHubNotificationBaselineV4";
+  const EVENTS_KEY = "businessHubNotificationEventsV3";
+
+  const STORAGE = {
+    sales: "businessHubSalesSafe",
+    transactions: "businessHubTransactions",
+    products: "businessHubProductsV3",
+    customers: "businessHubCustomersSafe"
+  };
+
+  function read(key, fallback) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key));
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function write(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+
+  function getArray(key) {
+    const value = read(key, []);
+    return Array.isArray(value) ? value : [];
+  }
+
+  function makeKey(value) {
+    let hash = 0;
+    const str = String(value || "");
+
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+
+    return String(Math.abs(hash));
+  }
+
+  function itemKey(prefix, item) {
+    return prefix + "-" + makeKey(
+      item.id ||
+      item.sku ||
+      item.name ||
+      item.company ||
+      JSON.stringify(item)
+    );
+  }
+
+  function getBaseline() {
+    return read(BASELINE_KEY, null);
+  }
+
+  function createBaseline() {
+    const baseline = {
+      sales: getArray(STORAGE.sales).map(function (x) {
+        return itemKey("sale", x);
+      }),
+
+      transactions: getArray(STORAGE.transactions).map(function (x) {
+        return itemKey("tx", x);
+      }),
+
+      customers: getArray(STORAGE.customers).map(function (x) {
+        return itemKey("customer", x);
+      }),
+
+      products: getArray(STORAGE.products).map(function (x) {
+        return {
+          id: itemKey("product", x),
+          stock: Number(x.stock || 0)
+        };
+      }),
+
+      createdAt: Date.now()
+    };
+
+    write(BASELINE_KEY, baseline);
+
+    return baseline;
+  }
+
+  function getEvents() {
+    return read(EVENTS_KEY, {});
+  }
+
+  function saveEvents(events) {
+    write(EVENTS_KEY, events);
+  }
+
+  function addEvent(id, title, description, page, icon) {
+    const events = getEvents();
+
+    if (events[id]) return;
+
+    events[id] = {
+      id: id,
+      title: title,
+      description: description,
+      page: page,
+      icon: icon || "•",
+      createdAt: Date.now()
+    };
+
+    saveEvents(events);
+  }
+
+  function detectNewCollection(
+    current,
+    previous,
+    prefix,
+    callback
+  ) {
+    const old = new Set(previous || []);
+
+    current.forEach(function (item) {
+      const key = itemKey(prefix, item);
+
+      if (!old.has(key)) {
+        callback(item, key);
+      }
+    });
+  }
+
+  function scan() {
+    let baseline = getBaseline();
+
+    /*
+     * Pertama kali:
+     * semua data yang sudah ada dianggap data lama.
+     */
+    if (!baseline) {
+      createBaseline();
+
+      /*
+       * Bersihkan event lama dari versi sebelumnya
+       * agar badge tidak tiba-tiba penuh.
+       */
+      write(EVENTS_KEY, {});
+
+      if (
+        typeof window.refreshNotificationEngine ===
+        "function"
+      ) {
+        window.refreshNotificationEngine();
+      }
+
+      return;
+    }
+
+    /* =========================
+       SALES BARU
+       ========================= */
+    const sales = getArray(STORAGE.sales);
+
+    detectNewCollection(
+      sales,
+      baseline.sales,
+      "sale",
+      function (sale, key) {
+        addEvent(
+          "new-" + key,
+          "Penjualan baru",
+          (sale.product || "Produk") +
+            " — " +
+            (sale.customer || "Customer"),
+          "sales",
+          "🛒"
+        );
+      }
+    );
+
+    /* =========================
+       TRANSAKSI BARU
+       ========================= */
+    const transactions =
+      getArray(STORAGE.transactions);
+
+    detectNewCollection(
+      transactions,
+      baseline.transactions,
+      "tx",
+      function (tx, key) {
+        addEvent(
+          "new-" + key,
+          tx.type === "expense"
+            ? "Pengeluaran baru"
+            : "Transaksi pemasukan",
+          tx.description ||
+            tx.category ||
+            "Transaksi Finance",
+          tx.type === "expense"
+            ? "expenses"
+            : "finance",
+          tx.type === "expense"
+            ? "💸"
+            : "💰"
+        );
+      }
+    );
+
+    /* =========================
+       CUSTOMER BARU
+       ========================= */
+    const customers =
+      getArray(STORAGE.customers);
+
+    detectNewCollection(
+      customers,
+      baseline.customers,
+      "customer",
+      function (customer, key) {
+        addEvent(
+          "new-" + key,
+          "Customer baru",
+          customer.name ||
+            customer.company ||
+            "Customer baru",
+          "customers",
+          "👥"
+        );
+      }
+    );
+
+    /* =========================
+       STOK TURUN
+       ========================= */
+    const products =
+      getArray(STORAGE.products);
+
+    const oldProducts = {};
+
+    (baseline.products || []).forEach(function (p) {
+      oldProducts[p.id] = Number(p.stock || 0);
+    });
+
+    products.forEach(function (product) {
+      const id = itemKey("product", product);
+      const currentStock = Number(product.stock || 0);
+
+      if (!Object.prototype.hasOwnProperty.call(oldProducts, id)) {
+        return;
+      }
+
+      const oldStock = oldProducts[id];
+
+      /*
+       * Hanya beri notifikasi jika stok benar-benar turun.
+       */
+      if (currentStock < oldStock) {
+        addEvent(
+          "stock-change-" +
+            id +
+            "-" +
+            currentStock,
+          "Stok berkurang",
+          (product.name || "Produk") +
+            " : " +
+            oldStock +
+            " → " +
+            currentStock,
+          "products",
+          "📦"
+        );
+      }
+
+      /*
+       * Stok kritis.
+       */
+      const target = Number(
+        product.target ||
+        product.targetStock ||
+        0
+      );
+
+      if (
+        target > 0 &&
+        currentStock <= target &&
+        oldStock > target
+      ) {
+        addEvent(
+          "low-stock-" +
+            id +
+            "-" +
+            currentStock,
+          "Stok rendah",
+          (product.name || "Produk") +
+            " tersisa " +
+            currentStock +
+            " unit",
+          "products",
+          "⚠️"
+        );
+      }
+    });
+
+    /*
+     * Update baseline setelah scan.
+     */
+    baseline.sales = sales.map(function (x) {
+      return itemKey("sale", x);
+    });
+
+    baseline.transactions = transactions.map(function (x) {
+      return itemKey("tx", x);
+    });
+
+    baseline.customers = customers.map(function (x) {
+      return itemKey("customer", x);
+    });
+
+    baseline.products = products.map(function (x) {
+      return {
+        id: itemKey("product", x),
+        stock: Number(x.stock || 0)
+      };
+    });
+
+    write(BASELINE_KEY, baseline);
+
+    if (
+      typeof window.refreshNotificationEngine ===
+      "function"
+    ) {
+      window.refreshNotificationEngine();
+    }
+  }
+
+  /*
+   * Monitor setiap 3 detik agar perubahan lokal
+   * cepat masuk ke notification center.
+   */
+  function start() {
+    setTimeout(scan, 800);
+
+    setInterval(scan, 3000);
+
+    window.addEventListener(
+      "storage",
+      function (e) {
+        if (
+          e.key === STORAGE.sales ||
+          e.key === STORAGE.transactions ||
+          e.key === STORAGE.products ||
+          e.key === STORAGE.customers
+        ) {
+          scan();
+        }
+      }
+    );
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+  window.runNotificationEngineV4 = scan;
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — DASHBOARD QUICK ACTIONS V1
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const ROUTES = {
+    sales: "sales",
+    finance: "finance",
+    products: "products",
+    customers: "customers",
+    expenses: "expenses",
+    opportunities: "opportunities"
+  };
+
+  function openPage(page) {
+    if (!page) return;
+
+    const nav = document.querySelector(
+      '[data-page="' + page + '"]'
+    );
+
+    if (nav) {
+      nav.click();
+      return;
+    }
+
+    if (typeof window.renderModule === "function") {
+      window.renderModule(page);
+    }
+  }
+
+  function findAction(text) {
+    const value = String(text || "").toLowerCase();
+
+    if (
+      value.includes("sales") ||
+      value.includes("penjualan") ||
+      value.includes("jual")
+    ) {
+      return ROUTES.sales;
+    }
+
+    if (
+      value.includes("finance") ||
+      value.includes("keuangan") ||
+      value.includes("transaksi")
+    ) {
+      return ROUTES.finance;
+    }
+
+    if (
+      value.includes("product") ||
+      value.includes("produk") ||
+      value.includes("inventory") ||
+      value.includes("stok")
+    ) {
+      return ROUTES.products;
+    }
+
+    if (
+      value.includes("customer") ||
+      value.includes("pelanggan")
+    ) {
+      return ROUTES.customers;
+    }
+
+    if (
+      value.includes("expense") ||
+      value.includes("pengeluaran")
+    ) {
+      return ROUTES.expenses;
+    }
+
+    if (
+      value.includes("opportun") ||
+      value.includes("peluang") ||
+      value.includes("action")
+    ) {
+      return ROUTES.opportunities;
+    }
+
+    return null;
+  }
+
+  function setup() {
+    const buttons = document.querySelectorAll(
+      ".bh4-actions button, " +
+      ".quick-actions button, " +
+      ".bh4-quick-action"
+    );
+
+    buttons.forEach(function (button) {
+      if (button.dataset.quickActionReady === "1") {
+        return;
+      }
+
+      const page =
+        button.dataset.page ||
+        button.dataset.target ||
+        findAction(
+          button.innerText ||
+          button.textContent ||
+          ""
+        );
+
+      if (!page) return;
+
+      button.dataset.quickActionReady = "1";
+      button.dataset.quickTarget = page;
+
+      button.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        openPage(page);
+      });
+    });
+  }
+
+  function start() {
+    setup();
+
+    /*
+     * Dashboard dirender ulang secara dinamis,
+     * sehingga observer memastikan Quick Actions
+     * tetap aktif setelah refresh dashboard.
+     */
+    const observer = new MutationObserver(function () {
+      setup();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — GLOBAL SEARCH V1
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const STORAGE = {
+    products: "businessHubProductsV3",
+    customers: "businessHubCustomersSafe",
+    sales: "businessHubSalesSafe",
+    transactions: "businessHubTransactions"
+  };
+
+  function read(key) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || "[]");
+      return Array.isArray(value) ? value : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function openPage(page) {
+    const nav = document.querySelector(
+      '[data-page="' + page + '"]'
+    );
+
+    if (nav) {
+      nav.click();
+    } else if (
+      typeof window.renderModule === "function"
+    ) {
+      window.renderModule(page);
+    }
+  }
+
+  function collectResults(query) {
+    const q = query.toLowerCase().trim();
+
+    if (!q) return [];
+
+    const results = [];
+
+    read(STORAGE.products).forEach(function (item) {
+      const text = [
+        item.name,
+        item.sku,
+        item.category
+      ].join(" ").toLowerCase();
+
+      if (text.includes(q)) {
+        results.push({
+          type: "Product",
+          icon: "📦",
+          title: item.name || "Product",
+          detail: item.sku || item.category || "",
+          page: "products"
+        });
+      }
+    });
+
+    read(STORAGE.customers).forEach(function (item) {
+      const text = [
+        item.name,
+        item.company,
+        item.segment
+      ].join(" ").toLowerCase();
+
+      if (text.includes(q)) {
+        results.push({
+          type: "Customer",
+          icon: "👥",
+          title:
+            item.name ||
+            item.company ||
+            "Customer",
+          detail: item.segment || "",
+          page: "customers"
+        });
+      }
+    });
+
+    read(STORAGE.sales).forEach(function (item) {
+      const text = [
+        item.customer,
+        item.product,
+        item.date
+      ].join(" ").toLowerCase();
+
+      if (text.includes(q)) {
+        results.push({
+          type: "Sale",
+          icon: "🛒",
+          title:
+            item.product ||
+            "Sales transaction",
+          detail:
+            item.customer ||
+            item.date ||
+            "",
+          page: "sales"
+        });
+      }
+    });
+
+    read(STORAGE.transactions).forEach(function (item) {
+      const text = [
+        item.description,
+        item.category,
+        item.date,
+        item.type
+      ].join(" ").toLowerCase();
+
+      if (text.includes(q)) {
+        results.push({
+          type:
+            item.type === "expense"
+              ? "Expense"
+              : "Finance",
+          icon:
+            item.type === "expense"
+              ? "💸"
+              : "💰",
+          title:
+            item.description ||
+            item.category ||
+            "Transaction",
+          detail: item.date || "",
+          page:
+            item.type === "expense"
+              ? "expenses"
+              : "finance"
+        });
+      }
+    });
+
+    return results.slice(0, 12);
+  }
+
+  function createSearchUI() {
+    if (document.getElementById("pwGlobalSearch")) {
+      return;
+    }
+
+    const overlay =
+      document.createElement("div");
+
+    overlay.id = "pwGlobalSearch";
+    overlay.innerHTML = `
+      <div class="pw-search-box">
+        <div class="pw-search-header">
+          <strong>Global Search</strong>
+          <button type="button" id="pwSearchClose">×</button>
+        </div>
+
+        <div class="pw-search-input-wrap">
+          <span>⌕</span>
+          <input
+            id="pwSearchInput"
+            type="search"
+            autocomplete="off"
+            placeholder="Cari product, customer, sales..."
+          />
+        </div>
+
+        <div
+          id="pwSearchResults"
+          class="pw-search-results"
+        >
+          <div class="pw-search-empty">
+            Ketik untuk mencari...
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const input =
+      document.getElementById("pwSearchInput");
+
+    const results =
+      document.getElementById("pwSearchResults");
+
+    function renderResults(query) {
+      const data = collectResults(query);
+
+      if (!query.trim()) {
+        results.innerHTML = `
+          <div class="pw-search-empty">
+            Ketik untuk mencari product, customer,
+            sales atau transaksi.
+          </div>
+        `;
+        return;
+      }
+
+      if (!data.length) {
+        results.innerHTML = `
+          <div class="pw-search-empty">
+            Tidak ada hasil untuk
+            "<strong>${esc(query)}</strong>"
+          </div>
+        `;
+        return;
+      }
+
+      results.innerHTML = data.map(function (item, index) {
+        return `
+          <button
+            type="button"
+            class="pw-search-result"
+            data-index="${index}"
+          >
+            <span class="pw-search-result-icon">
+              ${item.icon}
+            </span>
+
+            <span class="pw-search-result-main">
+              <strong>${esc(item.title)}</strong>
+              <small>
+                ${esc(item.type)}
+                ${item.detail
+                  ? " · " + esc(item.detail)
+                  : ""}
+              </small>
+            </span>
+
+            <span class="pw-search-arrow">›</span>
+          </button>
+        `;
+      }).join("");
+
+      results
+        .querySelectorAll(".pw-search-result")
+        .forEach(function (button) {
+          button.addEventListener(
+            "click",
+            function () {
+              const index =
+                Number(button.dataset.index);
+
+              const item = data[index];
+
+              if (!item) return;
+
+              overlay.classList.remove("open");
+
+              input.value = "";
+
+              setTimeout(function () {
+                openPage(item.page);
+              }, 80);
+            }
+          );
+        });
+    }
+
+    input.addEventListener(
+      "input",
+      function () {
+        renderResults(input.value);
+      }
+    );
+
+    document
+      .getElementById("pwSearchClose")
+      .addEventListener(
+        "click",
+        function () {
+          overlay.classList.remove("open");
+          input.value = "";
+        }
+      );
+
+    overlay.addEventListener(
+      "click",
+      function (event) {
+        if (event.target === overlay) {
+          overlay.classList.remove("open");
+          input.value = "";
+        }
+      }
+    );
+
+    document.addEventListener(
+      "keydown",
+      function (event) {
+        if (
+          event.key === "/" &&
+          document.activeElement.tagName !==
+            "INPUT" &&
+          document.activeElement.tagName !==
+            "TEXTAREA"
+        ) {
+          event.preventDefault();
+
+          overlay.classList.add("open");
+
+          setTimeout(function () {
+            input.focus();
+          }, 50);
+        }
+
+        if (
+          event.key === "Escape" &&
+          overlay.classList.contains("open")
+        ) {
+          overlay.classList.remove("open");
+          input.value = "";
+        }
+      }
+    );
+
+    window.openPWGlobalSearch = function () {
+      overlay.classList.add("open");
+
+      setTimeout(function () {
+        input.focus();
+      }, 50);
+    };
+  }
+
+  function connectSearchButton() {
+    const button =
+      document.getElementById("searchButton");
+
+    if (!button || button.dataset.searchReady === "1") {
+      return;
+    }
+
+    button.dataset.searchReady = "1";
+
+    button.addEventListener(
+      "click",
+      function (event) {
+        event.preventDefault();
+
+        createSearchUI();
+
+        if (
+          typeof window.openPWGlobalSearch ===
+          "function"
+        ) {
+          window.openPWGlobalSearch();
+        }
+      }
+    );
+  }
+
+  function start() {
+    createSearchUI();
+    connectSearchButton();
+
+    setTimeout(connectSearchButton, 500);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — COMMAND CENTER V1
+   Search -> quick navigation commands
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const COMMANDS = [
+    {
+      keys: ["dashboard", "home", "beranda"],
+      title: "Dashboard",
+      description: "Buka Executive Dashboard",
+      page: "dashboard",
+      icon: "⌂"
+    },
+    {
+      keys: ["sales", "sale", "penjualan"],
+      title: "Sales",
+      description: "Buka Sales Management",
+      page: "sales",
+      icon: "🛒"
+    },
+    {
+      keys: ["products", "product", "produk", "inventory", "stok"],
+      title: "Products",
+      description: "Buka Products & Inventory",
+      page: "products",
+      icon: "📦"
+    },
+    {
+      keys: ["customers", "customer", "pelanggan"],
+      title: "Customers",
+      description: "Buka Customer Management",
+      page: "customers",
+      icon: "👥"
+    },
+    {
+      keys: ["finance", "keuangan", "cashflow"],
+      title: "Finance",
+      description: "Buka Finance",
+      page: "finance",
+      icon: "💰"
+    },
+    {
+      keys: ["expenses", "expense", "pengeluaran"],
+      title: "Expenses",
+      description: "Buka Expense Management",
+      page: "expenses",
+      icon: "💸"
+    },
+    {
+      keys: ["revenue", "pendapatan"],
+      title: "Revenue",
+      description: "Buka Revenue",
+      page: "revenue",
+      icon: "📈"
+    },
+    {
+      keys: ["opportunities", "opportunity", "peluang"],
+      title: "Opportunities",
+      description: "Buka Opportunity Center",
+      page: "opportunities",
+      icon: "⚡"
+    }
+  ];
+
+  function openPage(page) {
+    const nav = document.querySelector(
+      '[data-page="' + page + '"]'
+    );
+
+    if (nav) {
+      nav.click();
+      return;
+    }
+
+    if (typeof window.renderModule === "function") {
+      window.renderModule(page);
+    }
+  }
+
+  function getCommands(query) {
+    const q = String(query || "")
+      .trim()
+      .toLowerCase();
+
+    if (!q) return [];
+
+    return COMMANDS.filter(function (command) {
+      return command.keys.some(function (key) {
+        return (
+          key === q ||
+          key.startsWith(q) ||
+          q.includes(key)
+        );
+      });
+    });
+  }
+
+  function renderCommands() {
+    const input =
+      document.getElementById("pwSearchInput");
+
+    const results =
+      document.getElementById("pwSearchResults");
+
+    if (!input || !results) return;
+
+    const commands = getCommands(input.value);
+
+    if (!commands.length) return;
+
+    const existing =
+      results.querySelector(".pw-command-section");
+
+    if (existing) {
+      existing.remove();
+    }
+
+    const section =
+      document.createElement("div");
+
+    section.className = "pw-command-section";
+
+    section.innerHTML = `
+      <div class="pw-command-label">
+        QUICK NAVIGATION
+      </div>
+
+      ${commands.map(function (command, index) {
+        return `
+          <button
+            type="button"
+            class="pw-command-item"
+            data-command-index="${index}"
+          >
+            <span class="pw-command-icon">
+              ${command.icon}
+            </span>
+
+            <span class="pw-command-main">
+              <strong>${command.title}</strong>
+              <small>${command.description}</small>
+            </span>
+
+            <span class="pw-command-arrow">›</span>
+          </button>
+        `;
+      }).join("")}
+    `;
+
+    results.insertBefore(
+      section,
+      results.firstChild
+    );
+
+    section
+      .querySelectorAll(".pw-command-item")
+      .forEach(function (button) {
+        button.addEventListener(
+          "click",
+          function () {
+            const index =
+              Number(
+                button.dataset.commandIndex
+              );
+
+            const command = commands[index];
+
+            if (!command) return;
+
+            const overlay =
+              document.getElementById(
+                "pwGlobalSearch"
+              );
+
+            if (overlay) {
+              overlay.classList.remove("open");
+            }
+
+            input.value = "";
+
+            setTimeout(function () {
+              openPage(command.page);
+            }, 80);
+          }
+        );
+      });
+  }
+
+  function connect() {
+    const input =
+      document.getElementById("pwSearchInput");
+
+    if (!input || input.dataset.commandReady === "1") {
+      return;
+    }
+
+    input.dataset.commandReady = "1";
+
+    input.addEventListener(
+      "input",
+      function () {
+        setTimeout(renderCommands, 0);
+      }
+    );
+  }
+
+  function start() {
+    connect();
+
+    setInterval(connect, 700);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — ACTIVITY CENTER V1
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const KEY = "businessHubActivityCenterV1";
+  const MAX_ITEMS = 60;
+
+  function load() {
+    try {
+      const data = JSON.parse(localStorage.getItem(KEY) || "[]");
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function save(items) {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify(items.slice(0, MAX_ITEMS))
+    );
+  }
+
+  function addActivity(type, title, description, page) {
+    const items = load();
+
+    const item = {
+      id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+      type: type,
+      title: title,
+      description: description || "",
+      page: page || "dashboard",
+      time: new Date().toISOString()
+    };
+
+    items.unshift(item);
+    save(items);
+
+    window.dispatchEvent(
+      new CustomEvent("pwActivityAdded")
+    );
+
+    return item;
+  }
+
+  function formatTime(value) {
+    const date = new Date(value);
+
+    if (isNaN(date.getTime())) {
+      return "";
+    }
+
+    return date.toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  }
+
+  function icon(type) {
+    const icons = {
+      sale: "🛒",
+      finance: "💰",
+      stock: "📦",
+      customer: "👤",
+      target: "🎯",
+      system: "⚡"
+    };
+
+    return icons[type] || icons.system;
+  }
+
+  function renderActivityCenter() {
+    const container =
+      document.getElementById("pwActivityCenter");
+
+    if (!container) return;
+
+    const items = load();
+
+    if (!items.length) {
+      container.innerHTML = `
+        <div class="pw-activity-empty">
+          <div>◷</div>
+          <strong>Belum ada aktivitas</strong>
+          <span>Aktivitas bisnis baru akan muncul di sini.</span>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = items.slice(0, 20).map(function (item) {
+      return `
+        <button
+          type="button"
+          class="pw-activity-item"
+          data-activity-page="${item.page || "dashboard"}"
+        >
+          <span class="pw-activity-icon">
+            ${icon(item.type)}
+          </span>
+
+          <span class="pw-activity-content">
+            <strong>${escapeHtml(item.title)}</strong>
+            <small>${escapeHtml(item.description || "")}</small>
+            <em>${formatTime(item.time)}</em>
+          </span>
+
+          <span class="pw-activity-arrow">›</span>
+        </button>
+      `;
+    }).join("");
+
+    container
+      .querySelectorAll(".pw-activity-item")
+      .forEach(function (button) {
+        button.addEventListener("click", function () {
+          const page =
+            button.dataset.activityPage;
+
+          const nav =
+            document.querySelector(
+              '[data-page="' + page + '"]'
+            );
+
+          if (nav) {
+            nav.click();
+          }
+        });
+      });
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function injectUI() {
+    if (document.getElementById("pwActivityCenter")) {
+      renderActivityCenter();
+      return;
+    }
+
+    const main =
+      document.querySelector("#dashboardExtras");
+
+    if (!main) return;
+
+    const wrapper =
+      document.createElement("section");
+
+    wrapper.className = "pw-activity-card";
+
+    wrapper.innerHTML = `
+      <div class="pw-activity-header">
+        <div>
+          <span class="pw-section-kicker">
+            BUSINESS ACTIVITY
+          </span>
+          <h3>Recent Activity</h3>
+        </div>
+
+        <button
+          type="button"
+          class="pw-activity-refresh"
+          id="pwActivityRefresh"
+        >
+          ↻
+        </button>
+      </div>
+
+      <div id="pwActivityCenter"></div>
+    `;
+
+    main.appendChild(wrapper);
+
+    const refresh =
+      document.getElementById(
+        "pwActivityRefresh"
+      );
+
+    if (refresh) {
+      refresh.addEventListener(
+        "click",
+        renderActivityCenter
+      );
+    }
+
+    renderActivityCenter();
+  }
+
+  function monitorData() {
+    const signatures = {};
+
+    const sources = [
+      {
+        key: "businessHubSalesSafe",
+        type: "sale",
+        page: "sales",
+        title: "New sale recorded",
+        description: "Sales data berubah"
+      },
+      {
+        key: "businessHubTransactions",
+        type: "finance",
+        page: "finance",
+        title: "Finance activity updated",
+        description: "Transaksi finance berubah"
+      },
+      {
+        key: "businessHubProductsV3",
+        type: "stock",
+        page: "products",
+        title: "Inventory updated",
+        description: "Data produk atau stok berubah"
+      },
+      {
+        key: "businessHubCustomersSafe",
+        type: "customer",
+        page: "customers",
+        title: "Customer database updated",
+        description: "Data customer berubah"
+      },
+      {
+        key: "businessHubSalesTargetsV1",
+        type: "target",
+        page: "sales",
+        title: "Sales target updated",
+        description: "Target penjualan berubah"
+      }
+    ];
+
+    function scan() {
+      sources.forEach(function (source) {
+        let raw =
+          localStorage.getItem(source.key) || "";
+
+        let signature =
+          raw.length + ":" +
+          raw.slice(-120);
+
+        if (
+          signatures[source.key] === undefined
+        ) {
+          signatures[source.key] = signature;
+          return;
+        }
+
+        if (
+          signatures[source.key] !== signature
+        ) {
+          signatures[source.key] = signature;
+
+          addActivity(
+            source.type,
+            source.title,
+            source.description,
+            source.page
+          );
+
+          renderActivityCenter();
+        }
+      });
+    }
+
+    setInterval(scan, 2500);
+  }
+
+  window.addBusinessActivity = addActivity;
+  window.renderActivityCenter =
+    renderActivityCenter;
+
+  function start() {
+    injectUI();
+    monitorData();
+
+    window.addEventListener(
+      "pwActivityAdded",
+      renderActivityCenter
+    );
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — DATA HEALTH CENTER V1
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const SOURCES = [
+    {
+      key: "businessHubTransactions",
+      name: "Finance",
+      page: "finance"
+    },
+    {
+      key: "businessHubSalesSafe",
+      name: "Sales",
+      page: "sales"
+    },
+    {
+      key: "businessHubProductsV3",
+      name: "Products",
+      page: "products"
+    },
+    {
+      key: "businessHubCustomersSafe",
+      name: "Customers",
+      page: "customers"
+    },
+    {
+      key: "businessHubSalesTargetsV1",
+      name: "Sales Target",
+      page: "sales"
+    }
+  ];
+
+  function inspect(source) {
+    const raw = localStorage.getItem(source.key);
+
+    if (raw === null) {
+      return {
+        status: "empty",
+        label: "Not configured",
+        count: 0
+      };
+    }
+
+    if (!raw.trim()) {
+      return {
+        status: "empty",
+        label: "Empty",
+        count: 0
+      };
+    }
+
+    try {
+      const data = JSON.parse(raw);
+
+      let count = 1;
+
+      if (Array.isArray(data)) {
+        count = data.length;
+      } else if (
+        data &&
+        typeof data === "object"
+      ) {
+        count = Object.keys(data).length;
+      }
+
+      return {
+        status: "healthy",
+        label: "Healthy",
+        count: count
+      };
+    } catch (error) {
+      return {
+        status: "error",
+        label: "Invalid data",
+        count: 0
+      };
+    }
+  }
+
+  function getHealth() {
+    return SOURCES.map(function (source) {
+      return {
+        ...source,
+        ...inspect(source)
+      };
+    });
+  }
+
+  function getOverall() {
+    const data = getHealth();
+
+    const errors = data.filter(function (item) {
+      return item.status === "error";
+    }).length;
+
+    const empty = data.filter(function (item) {
+      return item.status === "empty";
+    }).length;
+
+    if (errors > 0) {
+      return {
+        status: "error",
+        label: "Needs attention"
+      };
+    }
+
+    if (empty > 0) {
+      return {
+        status: "warning",
+        label: "Partially configured"
+      };
+    }
+
+    return {
+      status: "healthy",
+      label: "All systems healthy"
+    };
+  }
+
+  function icon(status) {
+    if (status === "healthy") return "✓";
+    if (status === "warning") return "!";
+    return "×";
+  }
+
+  function render() {
+    const container =
+      document.getElementById(
+        "pwDataHealthContent"
+      );
+
+    if (!container) return;
+
+    const data = getHealth();
+    const overall = getOverall();
+
+    container.innerHTML = `
+      <div class="pw-health-summary">
+        <div class="pw-health-status ${overall.status}">
+          <span>${icon(overall.status)}</span>
+          <div>
+            <strong>${overall.label}</strong>
+            <small>
+              ${data.length} data modules monitored
+            </small>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          id="pwHealthRefresh"
+          class="pw-health-refresh"
+        >
+          ↻
+        </button>
+      </div>
+
+      <div class="pw-health-list">
+        ${data.map(function (item) {
+          return `
+            <button
+              type="button"
+              class="pw-health-row"
+              data-health-page="${item.page}"
+            >
+              <span class="pw-health-dot ${item.status}">
+                ${icon(item.status)}
+              </span>
+
+              <span class="pw-health-name">
+                <strong>${item.name}</strong>
+                <small>
+                  ${item.status === "healthy"
+                    ? item.count + " record"
+                      + (item.count === 1 ? "" : "s")
+                    : item.label}
+                </small>
+              </span>
+
+              <span class="pw-health-label ${item.status}">
+                ${item.label}
+              </span>
+
+              <span class="pw-health-arrow">›</span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    `;
+
+    const refresh =
+      document.getElementById(
+        "pwHealthRefresh"
+      );
+
+    if (refresh) {
+      refresh.addEventListener(
+        "click",
+        render
+      );
+    }
+
+    container
+      .querySelectorAll(
+        ".pw-health-row"
+      )
+      .forEach(function (row) {
+        row.addEventListener(
+          "click",
+          function () {
+            const page =
+              row.dataset.healthPage;
+
+            const nav =
+              document.querySelector(
+                '[data-page="' + page + '"]'
+              );
+
+            if (nav) nav.click();
+          }
+        );
+      });
+  }
+
+  function inject() {
+    if (
+      document.getElementById(
+        "pwDataHealthCard"
+      )
+    ) {
+      render();
+      return;
+    }
+
+    const main =
+      document.querySelector("#dashboardExtras");
+
+    if (!main) return;
+
+    const card =
+      document.createElement("section");
+
+    card.id = "pwDataHealthCard";
+    card.className = "pw-data-health-card";
+
+    card.innerHTML = `
+      <div class="pw-health-heading">
+        <div>
+          <span>DATA INTEGRITY</span>
+          <h3>Data Health Center</h3>
+        </div>
+        <div class="pw-health-pulse"></div>
+      </div>
+
+      <div id="pwDataHealthContent"></div>
+    `;
+
+    main.appendChild(card);
+
+    render();
+  }
+
+  function start() {
+    inject();
+
+    setInterval(function () {
+      render();
+    }, 5000);
+
+    window.addEventListener(
+      "storage",
+      render
+    );
+
+    window.addEventListener(
+      "pwActivityAdded",
+      render
+    );
+  }
+
+  window.getPortofolioDataHealth =
+    getHealth;
+
+  window.getPortofolioOverallHealth =
+    getOverall;
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — DATA HEALTH CENTER V1
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const SOURCES = [
+    {
+      key: "businessHubTransactions",
+      name: "Finance",
+      page: "finance"
+    },
+    {
+      key: "businessHubSalesSafe",
+      name: "Sales",
+      page: "sales"
+    },
+    {
+      key: "businessHubProductsV3",
+      name: "Products",
+      page: "products"
+    },
+    {
+      key: "businessHubCustomersSafe",
+      name: "Customers",
+      page: "customers"
+    },
+    {
+      key: "businessHubSalesTargetsV1",
+      name: "Sales Target",
+      page: "sales"
+    }
+  ];
+
+  function inspect(source) {
+    const raw = localStorage.getItem(source.key);
+
+    if (raw === null) {
+      return {
+        status: "empty",
+        label: "Not configured",
+        count: 0
+      };
+    }
+
+    if (!raw.trim()) {
+      return {
+        status: "empty",
+        label: "Empty",
+        count: 0
+      };
+    }
+
+    try {
+      const data = JSON.parse(raw);
+
+      let count = 1;
+
+      if (Array.isArray(data)) {
+        count = data.length;
+      } else if (
+        data &&
+        typeof data === "object"
+      ) {
+        count = Object.keys(data).length;
+      }
+
+      return {
+        status: "healthy",
+        label: "Healthy",
+        count: count
+      };
+    } catch (error) {
+      return {
+        status: "error",
+        label: "Invalid data",
+        count: 0
+      };
+    }
+  }
+
+  function getHealth() {
+    return SOURCES.map(function (source) {
+      return {
+        ...source,
+        ...inspect(source)
+      };
+    });
+  }
+
+  function getOverall() {
+    const data = getHealth();
+
+    const errors = data.filter(function (item) {
+      return item.status === "error";
+    }).length;
+
+    const empty = data.filter(function (item) {
+      return item.status === "empty";
+    }).length;
+
+    if (errors > 0) {
+      return {
+        status: "error",
+        label: "Needs attention"
+      };
+    }
+
+    if (empty > 0) {
+      return {
+        status: "warning",
+        label: "Partially configured"
+      };
+    }
+
+    return {
+      status: "healthy",
+      label: "All systems healthy"
+    };
+  }
+
+  function icon(status) {
+    if (status === "healthy") return "✓";
+    if (status === "warning") return "!";
+    return "×";
+  }
+
+  function render() {
+    const container =
+      document.getElementById(
+        "pwDataHealthContent"
+      );
+
+    if (!container) return;
+
+    const data = getHealth();
+    const overall = getOverall();
+
+    container.innerHTML = `
+      <div class="pw-health-summary">
+        <div class="pw-health-status ${overall.status}">
+          <span>${icon(overall.status)}</span>
+          <div>
+            <strong>${overall.label}</strong>
+            <small>
+              ${data.length} data modules monitored
+            </small>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          id="pwHealthRefresh"
+          class="pw-health-refresh"
+        >
+          ↻
+        </button>
+      </div>
+
+      <div class="pw-health-list">
+        ${data.map(function (item) {
+          return `
+            <button
+              type="button"
+              class="pw-health-row"
+              data-health-page="${item.page}"
+            >
+              <span class="pw-health-dot ${item.status}">
+                ${icon(item.status)}
+              </span>
+
+              <span class="pw-health-name">
+                <strong>${item.name}</strong>
+                <small>
+                  ${item.status === "healthy"
+                    ? item.count + " record"
+                      + (item.count === 1 ? "" : "s")
+                    : item.label}
+                </small>
+              </span>
+
+              <span class="pw-health-label ${item.status}">
+                ${item.label}
+              </span>
+
+              <span class="pw-health-arrow">›</span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    `;
+
+    const refresh =
+      document.getElementById(
+        "pwHealthRefresh"
+      );
+
+    if (refresh) {
+      refresh.addEventListener(
+        "click",
+        render
+      );
+    }
+
+    container
+      .querySelectorAll(
+        ".pw-health-row"
+      )
+      .forEach(function (row) {
+        row.addEventListener(
+          "click",
+          function () {
+            const page =
+              row.dataset.healthPage;
+
+            const nav =
+              document.querySelector(
+                '[data-page="' + page + '"]'
+              );
+
+            if (nav) nav.click();
+          }
+        );
+      });
+  }
+
+  function inject() {
+    if (
+      document.getElementById(
+        "pwDataHealthCard"
+      )
+    ) {
+      render();
+      return;
+    }
+
+    const main =
+      document.querySelector("#dashboardExtras");
+
+    if (!main) return;
+
+    const card =
+      document.createElement("section");
+
+    card.id = "pwDataHealthCard";
+    card.className = "pw-data-health-card";
+
+    card.innerHTML = `
+      <div class="pw-health-heading">
+        <div>
+          <span>DATA INTEGRITY</span>
+          <h3>Data Health Center</h3>
+        </div>
+        <div class="pw-health-pulse"></div>
+      </div>
+
+      <div id="pwDataHealthContent"></div>
+    `;
+
+    main.appendChild(card);
+
+    render();
+  }
+
+  function start() {
+    inject();
+
+    setInterval(function () {
+      render();
+    }, 5000);
+
+    window.addEventListener(
+      "storage",
+      render
+    );
+
+    window.addEventListener(
+      "pwActivityAdded",
+      render
+    );
+  }
+
+  window.getPortofolioDataHealth =
+    getHealth;
+
+  window.getPortofolioOverallHealth =
+    getOverall;
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — EXECUTIVE KPI INTELLIGENCE V1
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const TX_KEY = "businessHubTransactions";
+  const SALES_KEY = "businessHubSalesSafe";
+  const PRODUCTS_KEY = "businessHubProductsV3";
+  const TARGET_KEY = "businessHubSalesTargetsV1";
+
+  function read(key, fallback) {
+    try {
+      const value = JSON.parse(
+        localStorage.getItem(key) || ""
+      );
+
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function number(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function money(value) {
+    return "Rp " + Math.round(value).toLocaleString("id-ID");
+  }
+
+  function pct(value) {
+    return number(value).toFixed(1) + "%";
+  }
+
+  function dateKey(date) {
+    const d = new Date(date);
+
+    if (isNaN(d.getTime())) {
+      return "";
+    }
+
+    return [
+      d.getFullYear(),
+      String(d.getMonth() + 1).padStart(2, "0"),
+      String(d.getDate()).padStart(2, "0")
+    ].join("-");
+  }
+
+  function monthRange(offset) {
+    const now = new Date();
+
+    const start = new Date(
+      now.getFullYear(),
+      now.getMonth() + offset,
+      1
+    );
+
+    const end = new Date(
+      now.getFullYear(),
+      now.getMonth() + offset + 1,
+      0,
+      23,
+      59,
+      59
+    );
+
+    return { start, end };
+  }
+
+  function inRange(date, range) {
+    const d = new Date(date);
+
+    if (isNaN(d.getTime())) return false;
+
+    return (
+      d >= range.start &&
+      d <= range.end
+    );
+  }
+
+  function calculate() {
+    const transactions =
+      read(TX_KEY, []);
+
+    const sales =
+      read(SALES_KEY, []);
+
+    const products =
+      read(PRODUCTS_KEY, []);
+
+    const target =
+      read(TARGET_KEY, {});
+
+    const current =
+      monthRange(0);
+
+    const previous =
+      monthRange(-1);
+
+    function calcRange(range) {
+      let revenue = 0;
+      let expense = 0;
+      let salesRevenue = 0;
+      let salesCount = 0;
+
+      transactions.forEach(function (tx) {
+        if (!inRange(tx.date, range)) {
+          return;
+        }
+
+        const amount =
+          number(tx.amount);
+
+        if (
+          tx.type === "expense"
+        ) {
+          expense += amount;
+        } else {
+          revenue += amount;
+        }
+      });
+
+      sales.forEach(function (sale) {
+        if (!inRange(sale.date, range)) {
+          return;
+        }
+
+        salesRevenue +=
+          number(sale.amount);
+
+        salesCount++;
+      });
+
+      const profit =
+        revenue - expense;
+
+      const margin =
+        revenue > 0
+          ? (profit / revenue) * 100
+          : 0;
+
+      return {
+        revenue,
+        expense,
+        profit,
+        margin,
+        salesRevenue,
+        salesCount
+      };
+    }
+
+    const now =
+      calcRange(current);
+
+    const prev =
+      calcRange(previous);
+
+    let inventoryValue = 0;
+    let lowStock = 0;
+
+    products.forEach(function (product) {
+      const stock =
+        number(product.stock);
+
+      const cost =
+        number(product.cost);
+
+      inventoryValue +=
+        stock * cost;
+
+      const targetStock =
+        number(
+          product.target ??
+          product.targetStock
+        );
+
+      if (
+        targetStock > 0 &&
+        stock < targetStock
+      ) {
+        lowStock++;
+      }
+    });
+
+    const revenueTarget =
+      number(
+        target.revenueTarget
+      );
+
+    const salesTarget =
+      number(
+        target.salesTarget
+      );
+
+    const revenueAchievement =
+      revenueTarget > 0
+        ? (now.salesRevenue / revenueTarget) * 100
+        : 0;
+
+    const salesAchievement =
+      salesTarget > 0
+        ? (now.salesCount / salesTarget) * 100
+        : 0;
+
+    function change(currentValue, previousValue) {
+      if (!previousValue) {
+        return currentValue > 0 ? 100 : 0;
+      }
+
+      return (
+        (currentValue - previousValue) /
+        Math.abs(previousValue)
+      ) * 100;
+    }
+
+    return {
+      revenue: now.revenue,
+      expense: now.expense,
+      profit: now.profit,
+      margin: now.margin,
+      salesRevenue: now.salesRevenue,
+      salesCount: now.salesCount,
+      inventoryValue,
+      lowStock,
+      revenueTarget,
+      salesTarget,
+      revenueAchievement,
+      salesAchievement,
+      revenueChange: change(
+        now.revenue,
+        prev.revenue
+      ),
+      expenseChange: change(
+        now.expense,
+        prev.expense
+      ),
+      profitChange: change(
+        now.profit,
+        prev.profit
+      ),
+      salesChange: change(
+        now.salesRevenue,
+        prev.salesRevenue
+      )
+    };
+  }
+
+  function trend(value, positiveGood) {
+    if (Math.abs(value) < 0.05) {
+      return {
+        cls: "flat",
+        text: "→ Stable"
+      };
+    }
+
+    const good =
+      positiveGood
+        ? value > 0
+        : value < 0;
+
+    return {
+      cls: good ? "up" : "down",
+      text:
+        (value > 0 ? "↑ " : "↓ ") +
+        Math.abs(value).toFixed(1) +
+        "%"
+    };
+  }
+
+  function render() {
+    const container =
+      document.getElementById(
+        "pwExecutiveKpi"
+      );
+
+    if (!container) return;
+
+    const k =
+      calculate();
+
+    const revenueTrend =
+      trend(k.revenueChange, true);
+
+    const expenseTrend =
+      trend(k.expenseChange, false);
+
+    const profitTrend =
+      trend(k.profitChange, true);
+
+    const salesTrend =
+      trend(k.salesChange, true);
+
+    container.innerHTML = `
+      <div class="pw-exec-kpi-header">
+        <div>
+          <span>EXECUTIVE INTELLIGENCE</span>
+          <h3>Business Performance</h3>
+        </div>
+
+        <div class="pw-exec-period">
+          ${new Date().toLocaleString(
+            "id-ID",
+            {
+              month: "long",
+              year: "numeric"
+            }
+          )}
+        </div>
+      </div>
+
+      <div class="pw-exec-kpi-grid">
+
+        <div class="pw-exec-kpi-card">
+          <span class="pw-exec-kpi-label">
+            Revenue
+          </span>
+          <strong>
+            ${money(k.revenue)}
+          </strong>
+          <small class="${revenueTrend.cls}">
+            ${revenueTrend.text} vs last month
+          </small>
+        </div>
+
+        <div class="pw-exec-kpi-card">
+          <span class="pw-exec-kpi-label">
+            Expense
+          </span>
+          <strong>
+            ${money(k.expense)}
+          </strong>
+          <small class="${expenseTrend.cls}">
+            ${expenseTrend.text} vs last month
+          </small>
+        </div>
+
+        <div class="pw-exec-kpi-card">
+          <span class="pw-exec-kpi-label">
+            Net Profit
+          </span>
+          <strong>
+            ${money(k.profit)}
+          </strong>
+          <small class="${profitTrend.cls}">
+            ${profitTrend.text} vs last month
+          </small>
+        </div>
+
+        <div class="pw-exec-kpi-card">
+          <span class="pw-exec-kpi-label">
+            Profit Margin
+          </span>
+          <strong>
+            ${pct(k.margin)}
+          </strong>
+          <small class="${
+            k.margin >= 0
+              ? "up"
+              : "down"
+          }">
+            ${k.margin >= 0
+              ? "Healthy profit position"
+              : "Negative profit"}
+          </small>
+        </div>
+
+        <div class="pw-exec-kpi-card">
+          <span class="pw-exec-kpi-label">
+            Sales Target
+          </span>
+          <strong>
+            ${pct(k.revenueAchievement)}
+          </strong>
+          <small class="${
+            k.revenueAchievement >= 70
+              ? "up"
+              : "down"
+          }">
+            ${money(k.salesRevenue)}
+            / ${money(k.revenueTarget)}
+          </small>
+        </div>
+
+        <div class="pw-exec-kpi-card">
+          <span class="pw-exec-kpi-label">
+            Inventory Value
+          </span>
+          <strong>
+            ${money(k.inventoryValue)}
+          </strong>
+          <small class="${
+            k.lowStock > 0
+              ? "down"
+              : "up"
+          }">
+            ${k.lowStock} low-stock item
+            ${k.lowStock === 1 ? "" : "s"}
+          </small>
+        </div>
+
+      </div>
+
+      <div class="pw-exec-insight">
+        <span>⚡</span>
+        <div>
+          <strong>Executive Insight</strong>
+          <p>
+            ${
+              k.profit < 0
+                ? "Profit saat ini negatif. Review expense dan transaksi utama."
+                : k.revenueAchievement < 70
+                  ? "Revenue masih di bawah 70% target. Fokus pada sales pipeline."
+                  : k.lowStock > 0
+                    ? k.lowStock +
+                      " produk berada di bawah batas stok."
+                    : "Performa bisnis saat ini terlihat stabil berdasarkan data yang tersedia."
+            }
+          </p>
+        </div>
+      </div>
+    `;
+
+    container
+      .querySelectorAll(
+        ".pw-exec-kpi-card"
+      )
+      .forEach(function (card) {
+        card.addEventListener(
+          "click",
+          function () {
+            const label =
+              card
+                .querySelector(
+                  ".pw-exec-kpi-label"
+                )
+                ?.textContent
+                .toLowerCase() || "";
+
+            let page = "dashboard";
+
+            if (label.includes("expense")) {
+              page = "expenses";
+            } else if (
+              label.includes("revenue") ||
+              label.includes("sales")
+            ) {
+              page = "sales";
+            } else if (
+              label.includes("inventory")
+            ) {
+              page = "products";
+            } else if (
+              label.includes("profit")
+            ) {
+              page = "finance";
+            }
+
+            const nav =
+              document.querySelector(
+                '[data-page="' + page + '"]'
+              );
+
+            if (nav) nav.click();
+          }
+        );
+      });
+  }
+
+  function inject() {
+    if (
+      document.getElementById(
+        "pwExecutiveKpiCard"
+      )
+    ) {
+      render();
+      return;
+    }
+
+    const main =
+      document.querySelector("#dashboardExtras");
+
+    if (!main) return;
+
+    const card =
+      document.createElement("section");
+
+    card.id = "pwExecutiveKpiCard";
+    card.className =
+      "pw-executive-kpi-card";
+
+    card.innerHTML = `
+      <div id="pwExecutiveKpi"></div>
+    `;
+
+    /* Place Executive Intelligence at the very bottom
+       of the main content area. */
+    main.appendChild(card);
+
+    render();
+  }
+
+  function start() {
+    inject();
+
+    setInterval(
+      render,
+      5000
+    );
+
+    window.addEventListener(
+      "storage",
+      render
+    );
+
+    window.addEventListener(
+      "pwActivityAdded",
+      render
+    );
+  }
+
+  window.getExecutiveKpi =
+    calculate;
+
+  window.renderExecutiveKpi =
+    render;
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — FINANCIAL CHART V1
+   Revenue / Expense / Profit — Last 14 Days
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const TX_KEY = "businessHubTransactions";
+
+  function readTransactions() {
+    try {
+      const data = JSON.parse(
+        localStorage.getItem(TX_KEY) || "[]"
+      );
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function money(value) {
+    return "Rp " + Math.round(value).toLocaleString("id-ID");
+  }
+
+  function formatShort(value) {
+    if (value >= 1000000000) {
+      return "Rp " + (value / 1000000000).toFixed(1) + "M";
+    }
+
+    if (value >= 1000000) {
+      return "Rp " + (value / 1000000).toFixed(1) + "jt";
+    }
+
+    if (value >= 1000) {
+      return "Rp " + (value / 1000).toFixed(0) + "rb";
+    }
+
+    return "Rp " + Math.round(value);
+  }
+
+  function buildData() {
+    const transactions = readTransactions();
+    const result = [];
+
+    const now = new Date();
+
+    for (let i = 13; i >= 0; i--) {
+      const date = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - i
+      );
+
+      const key =
+        date.getFullYear() + "-" +
+        String(date.getMonth() + 1).padStart(2, "0") + "-" +
+        String(date.getDate()).padStart(2, "0");
+
+      let revenue = 0;
+      let expense = 0;
+
+      transactions.forEach(function (tx) {
+        if (!tx.date) return;
+
+        const txDate = new Date(tx.date);
+
+        if (isNaN(txDate.getTime())) return;
+
+        const txKey =
+          txDate.getFullYear() + "-" +
+          String(txDate.getMonth() + 1).padStart(2, "0") + "-" +
+          String(txDate.getDate()).padStart(2, "0");
+
+        if (txKey !== key) return;
+
+        const amount = Number(tx.amount) || 0;
+
+        if (tx.type === "expense") {
+          expense += amount;
+        } else {
+          revenue += amount;
+        }
+      });
+
+      result.push({
+        date: date,
+        label:
+          String(date.getDate()).padStart(2, "0") +
+          "/" +
+          String(date.getMonth() + 1).padStart(2, "0"),
+        revenue: revenue,
+        expense: expense,
+        profit: revenue - expense
+      });
+    }
+
+    return result;
+  }
+
+  function render() {
+    const root =
+      document.getElementById(
+        "pwFinancialChart"
+      );
+
+    if (!root) return;
+
+    const data = buildData();
+
+    const maxValue =
+      Math.max.apply(
+        null,
+        data.map(function (item) {
+          return Math.max(
+            item.revenue,
+            item.expense,
+            Math.abs(item.profit)
+          );
+        })
+      ) || 1;
+
+    const totalRevenue =
+      data.reduce(
+        (sum, item) => sum + item.revenue,
+        0
+      );
+
+    const totalExpense =
+      data.reduce(
+        (sum, item) => sum + item.expense,
+        0
+      );
+
+    const totalProfit =
+      totalRevenue - totalExpense;
+
+    root.innerHTML = `
+      <div class="pw-fin-chart-head">
+        <div>
+          <span>FINANCIAL TREND</span>
+          <h3>Revenue vs Expense</h3>
+        </div>
+
+        <div class="pw-fin-chart-summary">
+          <div>
+            <small>Revenue</small>
+            <strong>${money(totalRevenue)}</strong>
+          </div>
+          <div>
+            <small>Expense</small>
+            <strong>${money(totalExpense)}</strong>
+          </div>
+          <div>
+            <small>Profit</small>
+            <strong>${money(totalProfit)}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="pw-chart-legend">
+        <span>
+          <i class="revenue"></i>
+          Revenue
+        </span>
+
+        <span>
+          <i class="expense"></i>
+          Expense
+        </span>
+
+        <span>
+          <i class="profit"></i>
+          Profit
+        </span>
+      </div>
+
+      <div class="pw-fin-chart">
+        <div class="pw-chart-y">
+          <span>${formatShort(maxValue)}</span>
+          <span>${formatShort(maxValue * .75)}</span>
+          <span>${formatShort(maxValue * .5)}</span>
+          <span>${formatShort(maxValue * .25)}</span>
+          <span>Rp 0</span>
+        </div>
+
+        <div class="pw-chart-area">
+          <div class="pw-chart-grid">
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+          </div>
+
+          <div class="pw-bars">
+            ${data.map(function (item) {
+              const revenueHeight =
+                Math.max(
+                  2,
+                  (item.revenue / maxValue) * 100
+                );
+
+              const expenseHeight =
+                Math.max(
+                  2,
+                  (item.expense / maxValue) * 100
+                );
+
+              const profitHeight =
+                Math.max(
+                  2,
+                  (Math.abs(item.profit) / maxValue) * 100
+                );
+
+              return `
+                <div class="pw-chart-column">
+
+                  <div class="pw-bar-group">
+
+                    <span
+                      class="pw-bar revenue"
+                      style="height:${revenueHeight}%"
+                      title="${item.label} Revenue: ${money(item.revenue)}"
+                    ></span>
+
+                    <span
+                      class="pw-bar expense"
+                      style="height:${expenseHeight}%"
+                      title="${item.label} Expense: ${money(item.expense)}"
+                    ></span>
+
+                    <span
+                      class="pw-bar profit ${
+                        item.profit < 0
+                          ? "negative"
+                          : ""
+                      }"
+                      style="height:${profitHeight}%"
+                      title="${item.label} Profit: ${money(item.profit)}"
+                    ></span>
+
+                  </div>
+
+                  <small>${item.label}</small>
+
+                </div>
+              `;
+            }).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function inject() {
+    if (
+      document.getElementById(
+        "pwFinancialChartCard"
+      )
+    ) {
+      render();
+      return;
+    }
+
+    const main =
+      document.querySelector("#dashboardExtras");
+
+    if (!main) return;
+
+    const card =
+      document.createElement("section");
+
+    card.id = "pwFinancialChartCard";
+    card.className =
+      "pw-financial-chart-card";
+
+    card.innerHTML = `
+      <div id="pwFinancialChart"></div>
+    `;
+
+    const activity =
+      document.getElementById(
+        "pwActivityCard"
+      );
+
+    if (activity) {
+      activity.before(card);
+    } else {
+      main.appendChild(card);
+    }
+
+    render();
+  }
+
+  function start() {
+    inject();
+
+    setInterval(
+      render,
+      5000
+    );
+
+    window.addEventListener(
+      "storage",
+      render
+    );
+
+    window.addEventListener(
+      "pwActivityAdded",
+      render
+    );
+  }
+
+  window.renderFinancialChart =
+    render;
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — TOP PRODUCTS & CUSTOMERS V1
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const SALES_KEY = "businessHubSalesSafe";
+  const PRODUCTS_KEY = "businessHubProductsV3";
+  const CUSTOMERS_KEY = "businessHubCustomersSafe";
+
+  function read(key) {
+    try {
+      const data = JSON.parse(
+        localStorage.getItem(key) || "[]"
+      );
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function money(value) {
+    return "Rp " +
+      Math.round(Number(value) || 0)
+        .toLocaleString("id-ID");
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function calculate() {
+    const sales = read(SALES_KEY);
+    const products = read(PRODUCTS_KEY);
+    const customers = read(CUSTOMERS_KEY);
+
+    const productMap = {};
+    const customerMap = {};
+
+    products.forEach(function (product) {
+      const name =
+        product.name ||
+        product.product ||
+        product.sku ||
+        "Unknown Product";
+
+      productMap[name] = {
+        name: name,
+        revenue: 0,
+        qty: 0,
+        stock: Number(product.stock) || 0
+      };
+    });
+
+    customers.forEach(function (customer) {
+      const name =
+        customer.name ||
+        customer.company ||
+        "Unknown Customer";
+
+      customerMap[name] = {
+        name: name,
+        revenue: Number(customer.revenue) || 0,
+        orders: 0
+      };
+    });
+
+    sales.forEach(function (sale) {
+      const productName =
+        sale.product ||
+        sale.productName ||
+        "Unknown Product";
+
+      const customerName =
+        sale.customer ||
+        sale.customerName ||
+        "Unknown Customer";
+
+      const amount =
+        Number(sale.amount) || 0;
+
+      const qty =
+        Number(sale.qty) ||
+        Number(sale.quantity) ||
+        1;
+
+      if (!productMap[productName]) {
+        productMap[productName] = {
+          name: productName,
+          revenue: 0,
+          qty: 0,
+          stock: 0
+        };
+      }
+
+      productMap[productName].revenue += amount;
+      productMap[productName].qty += qty;
+
+      if (!customerMap[customerName]) {
+        customerMap[customerName] = {
+          name: customerName,
+          revenue: 0,
+          orders: 0
+        };
+      }
+
+      customerMap[customerName].revenue += amount;
+      customerMap[customerName].orders++;
+    });
+
+    Object.keys(customerMap).forEach(function (name) {
+      const stored =
+        customers.find(function (customer) {
+          return (
+            (customer.name || customer.company) === name
+          );
+        });
+
+      if (
+        stored &&
+        Number(stored.revenue) > 0
+      ) {
+        customerMap[name].revenue =
+          Math.max(
+            customerMap[name].revenue,
+            Number(stored.revenue)
+          );
+      }
+    });
+
+    const topProducts =
+      Object.values(productMap)
+        .sort(function (a, b) {
+          return b.revenue - a.revenue;
+        })
+        .slice(0, 5);
+
+    const topCustomers =
+      Object.values(customerMap)
+        .sort(function (a, b) {
+          return b.revenue - a.revenue;
+        })
+        .slice(0, 5);
+
+    return {
+      topProducts,
+      topCustomers
+    };
+  }
+
+  function renderList(items, type) {
+    if (!items.length) {
+      return `
+        <div class="pw-top-empty">
+          Belum ada data tersedia
+        </div>
+      `;
+    }
+
+    const max =
+      Math.max.apply(
+        null,
+        items.map(function (item) {
+          return item.revenue;
+        })
+      ) || 1;
+
+    return items.map(function (item, index) {
+      const width =
+        Math.max(
+          4,
+          (item.revenue / max) * 100
+        );
+
+      const detail =
+        type === "product"
+          ? (
+              item.qty +
+              " unit · stok " +
+              item.stock
+            )
+          : (
+              item.orders +
+              " order"
+            );
+
+      return `
+        <button
+          type="button"
+          class="pw-top-row"
+          data-top-type="${type}"
+          data-top-name="${escapeHtml(item.name)}"
+        >
+          <span class="pw-top-rank">
+            ${index + 1}
+          </span>
+
+          <span class="pw-top-main">
+            <strong>
+              ${escapeHtml(item.name)}
+            </strong>
+
+            <small>
+              ${detail}
+            </small>
+
+            <i>
+              <b style="width:${width}%"></b>
+            </i>
+          </span>
+
+          <span class="pw-top-value">
+            ${money(item.revenue)}
+          </span>
+        </button>
+      `;
+    }).join("");
+  }
+
+  function render() {
+    const root =
+      document.getElementById(
+        "pwTopIntelligence"
+      );
+
+    if (!root) return;
+
+    const data = calculate();
+
+    root.innerHTML = `
+      <div class="pw-top-head">
+        <div>
+          <span>BUSINESS INTELLIGENCE</span>
+          <h3>Top Performance</h3>
+        </div>
+
+        <button
+          type="button"
+          id="pwTopRefresh"
+          class="pw-top-refresh"
+        >
+          ↻
+        </button>
+      </div>
+
+      <div class="pw-top-grid">
+
+        <div class="pw-top-panel">
+          <div class="pw-top-panel-title">
+            <strong>Top Products</strong>
+            <small>Revenue contribution</small>
+          </div>
+
+          <div class="pw-top-list">
+            ${renderList(
+              data.topProducts,
+              "product"
+            )}
+          </div>
+        </div>
+
+        <div class="pw-top-panel">
+          <div class="pw-top-panel-title">
+            <strong>Top Customers</strong>
+            <small>Customer contribution</small>
+          </div>
+
+          <div class="pw-top-list">
+            ${renderList(
+              data.topCustomers,
+              "customer"
+            )}
+          </div>
+        </div>
+
+      </div>
+    `;
+
+    const refresh =
+      document.getElementById(
+        "pwTopRefresh"
+      );
+
+    if (refresh) {
+      refresh.addEventListener(
+        "click",
+        render
+      );
+    }
+
+    root
+      .querySelectorAll(".pw-top-row")
+      .forEach(function (row) {
+        row.addEventListener(
+          "click",
+          function () {
+            const type =
+              row.dataset.topType;
+
+            const page =
+              type === "product"
+                ? "products"
+                : "customers";
+
+            const nav =
+              document.querySelector(
+                '[data-page="' + page + '"]'
+              );
+
+            if (nav) nav.click();
+          }
+        );
+      });
+  }
+
+  function inject() {
+    if (
+      document.getElementById(
+        "pwTopIntelligenceCard"
+      )
+    ) {
+      render();
+      return;
+    }
+
+    const main =
+      document.querySelector("#dashboardExtras");
+
+    if (!main) return;
+
+    const card =
+      document.createElement("section");
+
+    card.id =
+      "pwTopIntelligenceCard";
+
+    card.className =
+      "pw-top-intelligence-card";
+
+    card.innerHTML = `
+      <div id="pwTopIntelligence"></div>
+    `;
+
+    main.appendChild(card);
+
+    render();
+  }
+
+  function start() {
+    inject();
+
+    setInterval(
+      render,
+      5000
+    );
+
+    window.addEventListener(
+      "storage",
+      render
+    );
+
+    window.addEventListener(
+      "pwActivityAdded",
+      render
+    );
+  }
+
+  window.getTopBusinessIntelligence =
+    calculate;
+
+  window.renderTopBusinessIntelligence =
+    render;
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — BACKUP & RESTORE CENTER V1
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const STORAGE_KEYS = [
+    "businessHubTransactions",
+    "businessHubSalesSafe",
+    "businessHubProductsV3",
+    "businessHubCustomersSafe",
+    "businessHubSalesTargetsV1",
+    "businessHubOpportunityStatusV1",
+    "businessHubActivityCenterV1",
+    "businessHubNotificationsReadV2",
+    "businessHubNotificationEventsV3",
+    "businessHubNotificationBaselineV4"
+  ];
+
+  function collectData() {
+    const data = {};
+
+    STORAGE_KEYS.forEach(function (key) {
+      const value =
+        localStorage.getItem(key);
+
+      if (value !== null) {
+        try {
+          data[key] = JSON.parse(value);
+        } catch (e) {
+          data[key] = value;
+        }
+      }
+    });
+
+    return {
+      app: "Portofolio Wandi",
+      version: "Backup V1",
+      createdAt: new Date().toISOString(),
+      data: data
+    };
+  }
+
+  function downloadFile(
+    content,
+    filename,
+    type
+  ) {
+    const blob =
+      new Blob(
+        [content],
+        { type: type }
+      );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 1000);
+  }
+
+  function backup() {
+    const backupData =
+      collectData();
+
+    const filename =
+      "portofolio-wandi-backup-" +
+      new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-") +
+      ".json";
+
+    downloadFile(
+      JSON.stringify(
+        backupData,
+        null,
+        2
+      ),
+      filename,
+      "application/json"
+    );
+
+    if (
+      typeof window.addBusinessActivity ===
+      "function"
+    ) {
+      window.addBusinessActivity(
+        "system",
+        "Backup created",
+        "Data Portofolio Wandi berhasil dicadangkan",
+        "dashboard"
+      );
+    }
+  }
+
+  function exportSalesCSV() {
+    let sales = [];
+
+    try {
+      sales = JSON.parse(
+        localStorage.getItem(
+          "businessHubSalesSafe"
+        ) || "[]"
+      );
+    } catch (e) {
+      sales = [];
+    }
+
+    if (!Array.isArray(sales)) {
+      sales = [];
+    }
+
+    const rows = [
+      [
+        "ID",
+        "Tanggal",
+        "Customer",
+        "Product",
+        "Qty",
+        "Amount"
+      ]
+    ];
+
+    sales.forEach(function (sale) {
+      rows.push([
+        sale.id ?? "",
+        sale.date ?? "",
+        sale.customer ?? "",
+        sale.product ?? "",
+        sale.qty ?? "",
+        sale.amount ?? ""
+      ]);
+    });
+
+    const csv =
+      rows.map(function (row) {
+        return row.map(function (cell) {
+          const value =
+            String(cell)
+              .replace(/"/g, '""');
+
+          return '"' + value + '"';
+        }).join(",");
+      }).join("\n");
+
+    downloadFile(
+      csv,
+      "portofolio-wandi-sales.csv",
+      "text/csv;charset=utf-8"
+    );
+  }
+
+  function validateBackup(data) {
+    return !!(
+      data &&
+      data.app === "Portofolio Wandi" &&
+      data.data &&
+      typeof data.data === "object"
+    );
+  }
+
+  function restore(file) {
+    if (!file) return;
+
+    const reader =
+      new FileReader();
+
+    reader.onload = function () {
+      try {
+        const data =
+          JSON.parse(
+            reader.result
+          );
+
+        if (!validateBackup(data)) {
+          alert(
+            "File backup tidak valid atau bukan backup Portofolio Wandi."
+          );
+          return;
+        }
+
+        const confirmed =
+          confirm(
+            "Restore backup ini?\n\n" +
+            "Data lokal saat ini akan diganti dengan data dari backup."
+          );
+
+        if (!confirmed) return;
+
+        Object.keys(data.data)
+          .forEach(function (key) {
+            const value =
+              data.data[key];
+
+            localStorage.setItem(
+              key,
+              typeof value === "string"
+                ? value
+                : JSON.stringify(value)
+            );
+          });
+
+        alert(
+          "Restore berhasil.\n\n" +
+          "Dashboard akan dimuat ulang."
+        );
+
+        location.reload();
+
+      } catch (error) {
+        alert(
+          "Backup gagal dibaca.\n\n" +
+          error.message
+        );
+      }
+    };
+
+    reader.readAsText(file);
+  }
+
+  function render() {
+    const root =
+      document.getElementById(
+        "pwBackupCenter"
+      );
+
+    if (!root) return;
+
+    let recordCount = 0;
+
+    STORAGE_KEYS.forEach(function (key) {
+      const raw =
+        localStorage.getItem(key);
+
+      if (!raw) return;
+
+      try {
+        const data =
+          JSON.parse(raw);
+
+        if (Array.isArray(data)) {
+          recordCount += data.length;
+        } else {
+          recordCount++;
+        }
+      } catch (e) {
+        recordCount++;
+      }
+    });
+
+    root.innerHTML = `
+      <div class="pw-backup-head">
+        <div>
+          <span>DATA SECURITY</span>
+          <h3>Backup & Restore</h3>
+          <small>
+            ${recordCount} data record terdeteksi
+          </small>
+        </div>
+
+        <div class="pw-backup-status">
+          ● Local
+        </div>
+      </div>
+
+      <div class="pw-backup-actions">
+
+        <button
+          type="button"
+          id="pwBackupNow"
+          class="pw-backup-primary"
+        >
+          <strong>↓</strong>
+          <span>
+            <b>Backup Data</b>
+            <small>Download semua data</small>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          id="pwRestoreData"
+          class="pw-backup-button"
+        >
+          <strong>↑</strong>
+          <span>
+            <b>Restore</b>
+            <small>Import file backup</small>
+          </span>
+        </button>
+
+        <button
+          type="button"
+          id="pwExportSales"
+          class="pw-backup-button"
+        >
+          <strong>⇩</strong>
+          <span>
+            <b>Export Sales</b>
+            <small>Download CSV</small>
+          </span>
+        </button>
+
+      </div>
+
+      <input
+        type="file"
+        id="pwRestoreInput"
+        accept=".json,application/json"
+        hidden
+      />
+
+      <div class="pw-backup-note">
+        <span>ⓘ</span>
+        <p>
+          Backup disimpan sebagai file di perangkat.
+          Simpan file tersebut di tempat yang aman.
+        </p>
+      </div>
+    `;
+
+    document
+      .getElementById("pwBackupNow")
+      ?.addEventListener(
+        "click",
+        backup
+      );
+
+    document
+      .getElementById("pwExportSales")
+      ?.addEventListener(
+        "click",
+        exportSalesCSV
+      );
+
+    const restoreButton =
+      document.getElementById(
+        "pwRestoreData"
+      );
+
+    const input =
+      document.getElementById(
+        "pwRestoreInput"
+      );
+
+    if (restoreButton && input) {
+      restoreButton.addEventListener(
+        "click",
+        function () {
+          input.click();
+        }
+      );
+
+      input.addEventListener(
+        "change",
+        function () {
+          restore(
+            input.files &&
+            input.files[0]
+          );
+
+          input.value = "";
+        }
+      );
+    }
+  }
+
+  function inject() {
+    if (
+      document.getElementById(
+        "pwBackupCenterCard"
+      )
+    ) {
+      render();
+      return;
+    }
+
+    const main =
+      document.querySelector("#dashboardExtras");
+
+    if (!main) return;
+
+    const card =
+      document.createElement("section");
+
+    card.id =
+      "pwBackupCenterCard";
+
+    card.className =
+      "pw-backup-center-card";
+
+    card.innerHTML = `
+      <div id="pwBackupCenter"></div>
+    `;
+
+    main.appendChild(card);
+
+    render();
+  }
+
+  function start() {
+    inject();
+
+    setInterval(
+      render,
+      5000
+    );
+  }
+
+  window.portofolioWandiBackup =
+    backup;
+
+  window.portofolioWandiRestore =
+    restore;
+
+  window.portofolioWandiExportSales =
+    exportSalesCSV;
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — EXECUTIVE REPORT CENTER V1
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const KEYS = {
+    tx: "businessHubTransactions",
+    sales: "businessHubSalesSafe",
+    products: "businessHubProductsV3",
+    customers: "businessHubCustomersSafe",
+    target: "businessHubSalesTargetsV1"
+  };
+
+  function read(key, fallback) {
+    try {
+      const value = JSON.parse(
+        localStorage.getItem(key) || "null"
+      );
+      return value == null ? fallback : value;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function money(value) {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0
+    }).format(Number(value) || 0);
+  }
+
+  function num(value) {
+    return new Intl.NumberFormat("id-ID")
+      .format(Number(value) || 0);
+  }
+
+  function getData() {
+    const tx = read(KEYS.tx, []);
+    const sales = read(KEYS.sales, []);
+    const products = read(KEYS.products, []);
+    const customers = read(KEYS.customers, []);
+    const target = read(KEYS.target, {});
+
+    const revenue = tx
+      .filter(x => x.type === "income")
+      .reduce((s, x) => s + Number(x.amount || 0), 0);
+
+    const expense = tx
+      .filter(x => x.type === "expense")
+      .reduce((s, x) => s + Number(x.amount || 0), 0);
+
+    const profit = revenue - expense;
+
+    const margin =
+      revenue > 0
+        ? (profit / revenue) * 100
+        : 0;
+
+    const salesRevenue = sales.reduce(
+      (s, x) => s + Number(x.amount || 0),
+      0
+    );
+
+    const salesCount = sales.length;
+
+    const targetRevenue =
+      Number(target.revenueTarget || 0);
+
+    const targetAchievement =
+      targetRevenue > 0
+        ? (salesRevenue / targetRevenue) * 100
+        : 0;
+
+    const inventoryValue = products.reduce(
+      (s, x) =>
+        s +
+        (Number(x.stock || 0) *
+         Number(x.cost || 0)),
+      0
+    );
+
+    const lowStock = products.filter(
+      x =>
+        Number(x.stock || 0) <=
+        Number(x.target || 0)
+    );
+
+    const productMap = {};
+
+    sales.forEach(function (sale) {
+      const name =
+        sale.product || "Unknown";
+
+      if (!productMap[name]) {
+        productMap[name] = {
+          name,
+          revenue: 0,
+          qty: 0
+        };
+      }
+
+      productMap[name].revenue +=
+        Number(sale.amount || 0);
+
+      productMap[name].qty +=
+        Number(sale.qty || 0);
+    });
+
+    const topProducts =
+      Object.values(productMap)
+        .sort((a, b) =>
+          b.revenue - a.revenue
+        )
+        .slice(0, 5);
+
+    const customerMap = {};
+
+    sales.forEach(function (sale) {
+      const name =
+        sale.customer || "Unknown";
+
+      if (!customerMap[name]) {
+        customerMap[name] = {
+          name,
+          revenue: 0,
+          orders: 0
+        };
+      }
+
+      customerMap[name].revenue +=
+        Number(sale.amount || 0);
+
+      customerMap[name].orders++;
+    });
+
+    const topCustomers =
+      Object.values(customerMap)
+        .sort((a, b) =>
+          b.revenue - a.revenue
+        )
+        .slice(0, 5);
+
+    return {
+      tx,
+      sales,
+      products,
+      customers,
+      revenue,
+      expense,
+      profit,
+      margin,
+      salesRevenue,
+      salesCount,
+      targetRevenue,
+      targetAchievement,
+      inventoryValue,
+      lowStock,
+      topProducts,
+      topCustomers
+    };
+  }
+
+  function render() {
+    const root =
+      document.getElementById(
+        "pwExecutiveReport"
+      );
+
+    if (!root) return;
+
+    const d = getData();
+
+    const reportDate =
+      new Date().toLocaleDateString(
+        "id-ID",
+        {
+          day: "2-digit",
+          month: "long",
+          year: "numeric"
+        }
+      );
+
+    root.innerHTML = `
+      <div class="pw-report-header">
+        <div>
+          <span class="pw-report-eyebrow">
+            EXECUTIVE REPORT
+          </span>
+
+          <h2>
+            Portofolio Wandi
+          </h2>
+
+          <p>
+            Business Performance Report
+            · ${reportDate}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          id="pwPrintReport"
+          class="pw-report-print"
+        >
+          Print / PDF
+        </button>
+      </div>
+
+      <div class="pw-report-kpis">
+
+        <div class="pw-report-kpi">
+          <span>Revenue</span>
+          <strong>${money(d.revenue)}</strong>
+          <small>
+            Sales ${money(d.salesRevenue)}
+          </small>
+        </div>
+
+        <div class="pw-report-kpi">
+          <span>Expenses</span>
+          <strong>${money(d.expense)}</strong>
+          <small>
+            ${d.revenue > 0
+              ? ((d.expense / d.revenue) * 100).toFixed(1)
+              : "0.0"}% of revenue
+          </small>
+        </div>
+
+        <div class="pw-report-kpi">
+          <span>Net Profit</span>
+          <strong>${money(d.profit)}</strong>
+          <small>
+            Margin ${d.margin.toFixed(1)}%
+          </small>
+        </div>
+
+        <div class="pw-report-kpi">
+          <span>Sales Target</span>
+          <strong>
+            ${d.targetRevenue > 0
+              ? d.targetAchievement.toFixed(1) + "%"
+              : "—"}
+          </strong>
+          <small>
+            ${num(d.salesCount)} transactions
+          </small>
+        </div>
+
+      </div>
+
+      <div class="pw-report-grid">
+
+        <section class="pw-report-section">
+          <div class="pw-report-section-title">
+            <strong>Top Products</strong>
+            <span>${d.topProducts.length}</span>
+          </div>
+
+          ${
+            d.topProducts.length
+              ? d.topProducts.map(function (x, i) {
+                  return `
+                    <div class="pw-report-row">
+                      <b>${i + 1}. ${x.name}</b>
+                      <span>
+                        ${money(x.revenue)}
+                        · ${num(x.qty)} qty
+                      </span>
+                    </div>
+                  `;
+                }).join("")
+              : `
+                <div class="pw-report-empty">
+                  Belum ada data sales.
+                </div>
+              `
+          }
+        </section>
+
+        <section class="pw-report-section">
+          <div class="pw-report-section-title">
+            <strong>Top Customers</strong>
+            <span>${d.topCustomers.length}</span>
+          </div>
+
+          ${
+            d.topCustomers.length
+              ? d.topCustomers.map(function (x, i) {
+                  return `
+                    <div class="pw-report-row">
+                      <b>${i + 1}. ${x.name}</b>
+                      <span>
+                        ${money(x.revenue)}
+                        · ${num(x.orders)} order
+                      </span>
+                    </div>
+                  `;
+                }).join("")
+              : `
+                <div class="pw-report-empty">
+                  Belum ada data customer.
+                </div>
+              `
+          }
+        </section>
+
+        <section class="pw-report-section">
+          <div class="pw-report-section-title">
+            <strong>Inventory</strong>
+            <span>${num(d.products.length)} SKU</span>
+          </div>
+
+          <div class="pw-report-inventory">
+            <div>
+              <span>Inventory Value</span>
+              <b>${money(d.inventoryValue)}</b>
+            </div>
+
+            <div>
+              <span>Low Stock</span>
+              <b>${num(d.lowStock.length)}</b>
+            </div>
+
+            <div>
+              <span>Customers</span>
+              <b>${num(d.customers.length)}</b>
+            </div>
+          </div>
+        </section>
+
+        <section class="pw-report-section">
+          <div class="pw-report-section-title">
+            <strong>Management Snapshot</strong>
+          </div>
+
+          <div class="pw-report-snapshot">
+
+            <div>
+              <span>Revenue</span>
+              <b>${money(d.revenue)}</b>
+            </div>
+
+            <div>
+              <span>Expense</span>
+              <b>${money(d.expense)}</b>
+            </div>
+
+            <div>
+              <span>Profit</span>
+              <b>${money(d.profit)}</b>
+            </div>
+
+            <div>
+              <span>Margin</span>
+              <b>${d.margin.toFixed(1)}%</b>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+
+      ${
+        d.lowStock.length
+          ? `
+            <div class="pw-report-alert">
+              <strong>Inventory Alert</strong>
+              <span>
+                ${d.lowStock.length}
+                produk berada pada atau di bawah
+                batas minimum stok.
+              </span>
+            </div>
+          `
+          : `
+            <div class="pw-report-ok">
+              <strong>Inventory Healthy</strong>
+              <span>
+                Tidak ada produk yang melewati
+                batas minimum stok.
+              </span>
+            </div>
+          `
+      }
+    `;
+
+    document
+      .getElementById("pwPrintReport")
+      ?.addEventListener(
+        "click",
+        function () {
+          window.print();
+        }
+      );
+  }
+
+  function inject() {
+    if (
+      document.getElementById(
+        "pwExecutiveReportCard"
+      )
+    ) {
+      render();
+      return;
+    }
+
+    const main =
+      document.querySelector("#dashboardExtras");
+
+    if (!main) return;
+
+    const card =
+      document.createElement("section");
+
+    card.id =
+      "pwExecutiveReportCard";
+
+    card.className =
+      "pw-executive-report-card";
+
+    card.innerHTML = `
+      <div id="pwExecutiveReport"></div>
+    `;
+
+    main.appendChild(card);
+
+    render();
+  }
+
+  function start() {
+    inject();
+
+    setInterval(
+      render,
+      5000
+    );
+  }
+
+  window.renderExecutiveReport =
+    render;
+
+  window.getExecutiveReportData =
+    getData;
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — CASH FLOW FORECAST V1
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const TX_KEY = "businessHubTransactions";
+
+  function readTransactions() {
+    try {
+      const data = JSON.parse(
+        localStorage.getItem(TX_KEY) || "[]"
+      );
+
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function money(value) {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0
+    }).format(Number(value) || 0);
+  }
+
+  function shortMoney(value) {
+    value = Number(value) || 0;
+
+    if (Math.abs(value) >= 1000000000) {
+      return "Rp " +
+        (value / 1000000000)
+          .toFixed(1)
+          .replace(".0", "") +
+        " M";
+    }
+
+    if (Math.abs(value) >= 1000000) {
+      return "Rp " +
+        (value / 1000000)
+          .toFixed(1)
+          .replace(".0", "") +
+        " jt";
+    }
+
+    if (Math.abs(value) >= 1000) {
+      return "Rp " +
+        (value / 1000)
+          .toFixed(0) +
+        " rb";
+    }
+
+    return "Rp " +
+      Math.round(value);
+  }
+
+  function getForecast() {
+    const tx = readTransactions();
+
+    const now = new Date();
+
+    const last30 = [];
+
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now);
+
+      date.setHours(0, 0, 0, 0);
+      date.setDate(
+        date.getDate() - i
+      );
+
+      const key =
+        date.toISOString()
+          .slice(0, 10);
+
+      last30.push({
+        date: key,
+        income: 0,
+        expense: 0,
+        net: 0
+      });
+    }
+
+    const dayMap = {};
+
+    last30.forEach(function (day) {
+      dayMap[day.date] = day;
+    });
+
+    tx.forEach(function (item) {
+      if (!item.date) return;
+
+      const dateKey =
+        String(item.date)
+          .slice(0, 10);
+
+      if (!dayMap[dateKey]) return;
+
+      const amount =
+        Number(item.amount || 0);
+
+      if (item.type === "income") {
+        dayMap[dateKey].income += amount;
+      }
+
+      if (item.type === "expense") {
+        dayMap[dateKey].expense += amount;
+      }
+    });
+
+    last30.forEach(function (day) {
+      day.net =
+        day.income -
+        day.expense;
+    });
+
+    const totalIncome =
+      last30.reduce(
+        (sum, x) =>
+          sum + x.income,
+        0
+      );
+
+    const totalExpense =
+      last30.reduce(
+        (sum, x) =>
+          sum + x.expense,
+        0
+      );
+
+    const avgIncome =
+      totalIncome / 30;
+
+    const avgExpense =
+      totalExpense / 30;
+
+    const avgNet =
+      avgIncome -
+      avgExpense;
+
+    const allTimeIncome =
+      tx
+        .filter(x => x.type === "income")
+        .reduce(
+          (s, x) =>
+            s + Number(x.amount || 0),
+          0
+        );
+
+    const allTimeExpense =
+      tx
+        .filter(x => x.type === "expense")
+        .reduce(
+          (s, x) =>
+            s + Number(x.amount || 0),
+          0
+        );
+
+    const currentCash =
+      allTimeIncome -
+      allTimeExpense;
+
+    function project(days) {
+      return currentCash +
+        (avgNet * days);
+    }
+
+    return {
+      days: last30,
+      totalIncome,
+      totalExpense,
+      avgIncome,
+      avgExpense,
+      avgNet,
+      currentCash,
+      projections: {
+        7: project(7),
+        14: project(14),
+        30: project(30)
+      }
+    };
+  }
+
+  function render() {
+    const root =
+      document.getElementById(
+        "pwCashflowForecast"
+      );
+
+    if (!root) return;
+
+    const d = getForecast();
+
+    const status =
+      d.avgNet > 0
+        ? {
+            label: "Positive",
+            text:
+              "Arus kas rata-rata harian positif."
+          }
+        : d.avgNet < 0
+          ? {
+              label: "Negative",
+              text:
+                "Pengeluaran rata-rata melebihi pemasukan."
+            }
+          : {
+              label: "Flat",
+              text:
+                "Belum ada perubahan net cash flow."
+            };
+
+    const maxValue =
+      Math.max(
+        ...d.days.map(x =>
+          Math.max(
+            x.income,
+            x.expense
+          )
+        ),
+        1
+      );
+
+    const chart =
+      d.days.map(function (day) {
+        const incomeHeight =
+          Math.max(
+            3,
+            (day.income / maxValue) * 100
+          );
+
+        const expenseHeight =
+          Math.max(
+            3,
+            (day.expense / maxValue) * 100
+          );
+
+        const label =
+          day.date.slice(8, 10);
+
+        return `
+          <div
+            class="pw-cf-day"
+            title="${day.date}
+Income: ${money(day.income)}
+Expense: ${money(day.expense)}"
+          >
+            <div class="pw-cf-bars">
+              <i
+                class="pw-cf-income"
+                style="height:${incomeHeight}%"
+              ></i>
+
+              <i
+                class="pw-cf-expense"
+                style="height:${expenseHeight}%"
+              ></i>
+            </div>
+
+            <small>${label}</small>
+          </div>
+        `;
+      }).join("");
+
+    root.innerHTML = `
+      <div class="pw-cf-header">
+        <div>
+          <span class="pw-cf-eyebrow">
+            CASH FLOW INTELLIGENCE
+          </span>
+
+          <h3>
+            Cash Flow Forecast
+          </h3>
+
+          <p>
+            Berdasarkan pola transaksi 30 hari terakhir
+          </p>
+        </div>
+
+        <div class="pw-cf-status">
+          <b>${status.label}</b>
+          <span>${status.text}</span>
+        </div>
+      </div>
+
+      <div class="pw-cf-kpis">
+
+        <div class="pw-cf-kpi">
+          <span>Current Cash</span>
+          <strong>
+            ${money(d.currentCash)}
+          </strong>
+          <small>
+            Net seluruh transaksi
+          </small>
+        </div>
+
+        <div class="pw-cf-kpi">
+          <span>Avg Income / Day</span>
+          <strong>
+            ${shortMoney(d.avgIncome)}
+          </strong>
+          <small>
+            30 hari
+          </small>
+        </div>
+
+        <div class="pw-cf-kpi">
+          <span>Avg Expense / Day</span>
+          <strong>
+            ${shortMoney(d.avgExpense)}
+          </strong>
+          <small>
+            30 hari
+          </small>
+        </div>
+
+        <div class="pw-cf-kpi">
+          <span>Net / Day</span>
+          <strong>
+            ${shortMoney(d.avgNet)}
+          </strong>
+          <small>
+            rata-rata
+          </small>
+        </div>
+
+      </div>
+
+      <div class="pw-cf-chart">
+        <div class="pw-cf-chart-head">
+          <strong>30 Day Cash Activity</strong>
+
+          <span>
+            <i class="pw-cf-dot-income"></i>
+            Income
+            <i class="pw-cf-dot-expense"></i>
+            Expense
+          </span>
+        </div>
+
+        <div class="pw-cf-chart-area">
+          ${chart}
+        </div>
+      </div>
+
+      <div class="pw-cf-forecast">
+
+        <div class="pw-cf-forecast-title">
+          <strong>Projected Cash Position</strong>
+          <span>Jika pola saat ini berlanjut</span>
+        </div>
+
+        <div class="pw-cf-projections">
+
+          <div>
+            <span>7 Days</span>
+            <b>
+              ${money(d.projections[7])}
+            </b>
+            <small>
+              ${shortMoney(
+                d.projections[7] -
+                d.currentCash
+              )}
+            </small>
+          </div>
+
+          <div>
+            <span>14 Days</span>
+            <b>
+              ${money(d.projections[14])}
+            </b>
+            <small>
+              ${shortMoney(
+                d.projections[14] -
+                d.currentCash
+              )}
+            </small>
+          </div>
+
+          <div>
+            <span>30 Days</span>
+            <b>
+              ${money(d.projections[30])}
+            </b>
+            <small>
+              ${shortMoney(
+                d.projections[30] -
+                d.currentCash
+              )}
+            </small>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  function inject() {
+    if (
+      document.getElementById(
+        "pwCashflowForecastCard"
+      )
+    ) {
+      render();
+      return;
+    }
+
+    const main =
+      document.querySelector("#dashboardExtras");
+
+    if (!main) return;
+
+    const card =
+      document.createElement("section");
+
+    card.id =
+      "pwCashflowForecastCard";
+
+    card.className =
+      "pw-cashflow-forecast-card";
+
+    card.innerHTML = `
+      <div id="pwCashflowForecast"></div>
+    `;
+
+    main.appendChild(card);
+
+    render();
+  }
+
+  function start() {
+    inject();
+
+    setInterval(
+      render,
+      5000
+    );
+
+    window.addEventListener(
+      "storage",
+      render
+    );
+  }
+
+  window.getCashflowForecast =
+    getForecast;
+
+  window.renderCashflowForecast =
+    render;
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+/* =========================================================
+   PORTOFOLIO WANDI — INVENTORY INTELLIGENCE V1
+   ========================================================= */
+(function () {
+  "use strict";
+
+  const KEY = "businessHubProductsV3";
+
+  function readProducts() {
+    try {
+      const data = JSON.parse(
+        localStorage.getItem(KEY) || "[]"
+      );
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function money(value) {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0
+    }).format(Number(value) || 0);
+  }
+
+  function getInventoryIntelligence() {
+    const products = readProducts();
+
+    let totalStock = 0;
+    let inventoryValue = 0;
+    let lowStock = 0;
+    let outOfStock = 0;
+
+    const items = products.map(function (p) {
+      const stock = Number(p.stock || 0);
+      const target = Number(p.target || 0);
+      const cost = Number(p.cost || 0);
+      const price = Number(p.price || 0);
+      const sold = Number(p.sold || 0);
+
+      const value = stock * cost;
+
+      totalStock += stock;
+      inventoryValue += value;
+
+      if (stock <= 0) {
+        outOfStock++;
+      } else if (stock <= target) {
+        lowStock++;
+      }
+
+      const risk =
+        stock <= 0
+          ? 100
+          : target > 0
+            ? Math.max(
+                0,
+                Math.min(
+                  100,
+                  ((target - stock) / target) * 100
+                )
+              )
+            : 0;
+
+      return {
+        ...p,
+        stock,
+        target,
+        cost,
+        price,
+        sold,
+        value,
+        risk
+      };
+    });
+
+    const riskItems =
+      items
+        .filter(x =>
+          x.stock <= x.target
+        )
+        .sort(function (a, b) {
+          return b.risk - a.risk;
+        })
+        .slice(0, 5);
+
+    const stockLeaders =
+      [...items]
+        .sort(function (a, b) {
+          return b.stock - a.stock;
+        })
+        .slice(0, 5);
+
+    const healthy =
+      products.length === 0
+        ? 0
+        : Math.round(
+            ((products.length -
+              lowStock -
+              outOfStock) /
+              products.length) *
+              100
+          );
+
+    return {
+      products,
+      items,
+      totalStock,
+      inventoryValue,
+      lowStock,
+      outOfStock,
+      healthy: Math.max(0, healthy),
+      riskItems,
+      stockLeaders
+    };
+  }
+
+  function routeProducts() {
+    const item =
+      document.querySelector(
+        '[data-page="products"]'
+      );
+
+    if (item) {
+      item.click();
+    }
+  }
+
+  function render() {
+    const root =
+      document.getElementById(
+        "pwInventoryIntelligence"
+      );
+
+    if (!root) return;
+
+    const d =
+      getInventoryIntelligence();
+
+    const healthLabel =
+      d.outOfStock > 0
+        ? "Attention"
+        : d.lowStock > 0
+          ? "Monitor"
+          : "Healthy";
+
+    root.innerHTML = `
+      <div class="pw-inv-header">
+        <div>
+          <span class="pw-inv-eyebrow">
+            INVENTORY INTELLIGENCE
+          </span>
+
+          <h3>Stock Control</h3>
+
+          <p>
+            Analisis kondisi inventory secara real-time
+          </p>
+        </div>
+
+        <div class="pw-inv-health">
+          <b>${healthLabel}</b>
+          <span>
+            ${d.healthy}% healthy
+          </span>
+        </div>
+      </div>
+
+      <div class="pw-inv-kpis">
+
+        <div class="pw-inv-kpi">
+          <span>Inventory Value</span>
+          <strong>
+            ${money(d.inventoryValue)}
+          </strong>
+          <small>
+            nilai berdasarkan cost
+          </small>
+        </div>
+
+        <div class="pw-inv-kpi">
+          <span>Total Stock</span>
+          <strong>
+            ${d.totalStock.toLocaleString("id-ID")}
+          </strong>
+          <small>
+            unit tersedia
+          </small>
+        </div>
+
+        <div class="pw-inv-kpi">
+          <span>Low Stock</span>
+          <strong>
+            ${d.lowStock}
+          </strong>
+          <small>
+            perlu monitoring
+          </small>
+        </div>
+
+        <div class="pw-inv-kpi">
+          <span>Out of Stock</span>
+          <strong>
+            ${d.outOfStock}
+          </strong>
+          <small>
+            produk kosong
+          </small>
+        </div>
+
+      </div>
+
+      <div class="pw-inv-grid">
+
+        <section class="pw-inv-panel">
+
+          <div class="pw-inv-panel-head">
+            <strong>Stock Risk</strong>
+            <span>
+              ${d.riskItems.length} items
+            </span>
+          </div>
+
+          ${
+            d.riskItems.length
+              ? d.riskItems.map(function (p) {
+                  return `
+                    <button
+                      type="button"
+                      class="pw-inv-row"
+                      data-product-route="1"
+                    >
+                      <span class="pw-inv-product">
+                        <b>
+                          ${p.name || "Unnamed"}
+                        </b>
+                        <small>
+                          ${p.sku || "No SKU"}
+                        </small>
+                      </span>
+
+                      <span class="pw-inv-stock">
+                        <b>
+                          ${p.stock}
+                        </b>
+                        <small>
+                          / min ${p.target}
+                        </small>
+                      </span>
+
+                      <span class="pw-inv-risk">
+                        ${
+                          p.stock <= 0
+                            ? "EMPTY"
+                            : "LOW"
+                        }
+                      </span>
+                    </button>
+                  `;
+                }).join("")
+              : `
+                <div class="pw-inv-empty">
+                  Semua produk berada di atas
+                  batas minimum stok.
+                </div>
+              `
+          }
+
+        </section>
+
+        <section class="pw-inv-panel">
+
+          <div class="pw-inv-panel-head">
+            <strong>Stock Leaders</strong>
+            <span>
+              top ${d.stockLeaders.length}
+            </span>
+          </div>
+
+          ${
+            d.stockLeaders.length
+              ? d.stockLeaders.map(function (p, i) {
+                  return `
+                    <button
+                      type="button"
+                      class="pw-inv-row"
+                      data-product-route="1"
+                    >
+                      <span class="pw-inv-rank">
+                        ${i + 1}
+                      </span>
+
+                      <span class="pw-inv-product">
+                        <b>
+                          ${p.name || "Unnamed"}
+                        </b>
+                        <small>
+                          ${money(p.value)}
+                        </small>
+                      </span>
+
+                      <span class="pw-inv-stock">
+                        <b>
+                          ${p.stock}
+                        </b>
+                        <small>
+                          unit
+                        </small>
+                      </span>
+                    </button>
+                  `;
+                }).join("")
+              : `
+                <div class="pw-inv-empty">
+                  Belum ada data inventory.
+                </div>
+              `
+          }
+
+        </section>
+
+      </div>
+
+      ${
+        d.outOfStock > 0
+          ? `
+            <div class="pw-inv-alert">
+              <strong>
+                ${d.outOfStock} produk kosong
+              </strong>
+
+              <span>
+                Periksa Products untuk melakukan
+                restock.
+              </span>
+
+              <button
+                type="button"
+                data-product-route="1"
+              >
+                Open Products
+              </button>
+            </div>
+          `
+          : d.lowStock > 0
+            ? `
+              <div class="pw-inv-alert">
+                <strong>
+                  ${d.lowStock} produk low stock
+                </strong>
+
+                <span>
+                  Beberapa inventory sudah berada
+                  pada batas minimum.
+                </span>
+
+                <button
+                  type="button"
+                  data-product-route="1"
+                >
+                  Open Products
+                </button>
+              </div>
+            `
+            : `
+              <div class="pw-inv-ok">
+                <strong>Inventory Healthy</strong>
+                <span>
+                  Tidak ada produk yang berada
+                  di bawah batas minimum.
+                </span>
+              </div>
+            `
+      }
+    `;
+
+    root
+      .querySelectorAll(
+        "[data-product-route]"
+      )
+      .forEach(function (button) {
+        button.addEventListener(
+          "click",
+          routeProducts
+        );
+      });
+  }
+
+  function inject() {
+    if (
+      document.getElementById(
+        "pwInventoryIntelligenceCard"
+      )
+    ) {
+      render();
+      return;
+    }
+
+    const main =
+      document.querySelector("#dashboardExtras");
+
+    if (!main) return;
+
+    const card =
+      document.createElement("section");
+
+    card.id =
+      "pwInventoryIntelligenceCard";
+
+    card.className =
+      "pw-inventory-intelligence-card";
+
+    card.innerHTML = `
+      <div id="pwInventoryIntelligence"></div>
+    `;
+
+    main.appendChild(card);
+
+    render();
+  }
+
+  function start() {
+    inject();
+
+    setInterval(
+      render,
+      5000
+    );
+
+    window.addEventListener(
+      "storage",
+      render
+    );
+  }
+
+  window.getInventoryIntelligence =
+    getInventoryIntelligence;
+
+  window.renderInventoryIntelligence =
+    render;
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      start
+    );
+  } else {
+    start();
+  }
+
+})();
+
+
+/* =========================================================
+   PORTOFOLIO WANDI — THEME SYSTEM V1
+   ========================================================= */
+(function () {
+  const STORAGE = "pwThemeSettingsV1";
+
+  function getTheme() {
+    return localStorage.getItem(STORAGE) || "white";
+  }
+
+  function applyTheme(theme) {
+    theme = theme === "black" ? "black" : "white";
+
+    document.body.classList.toggle(
+      "pw-theme-black",
+      theme === "black"
+    );
+
+    localStorage.setItem(STORAGE, theme);
+
+    document
+      .querySelectorAll(".pw-theme-option")
+      .forEach(function (button) {
+        button.classList.toggle(
+          "active",
+          button.dataset.theme === theme
+        );
+      });
+  }
+
+  function addThemeSetting() {
+    if (document.getElementById("pwThemeSettingsV1")) return;
+
+    const settings = document.querySelector(".pw-settings-page");
+
+    if (!settings) return;
+
+    const card = document.createElement("section");
+
+    card.id = "pwThemeSettingsV1";
+    card.className = "pw-theme-setting";
+
+    card.innerHTML = `
+      <div class="pw-theme-setting-title">
+        Appearance
+      </div>
+
+      <div class="pw-theme-setting-desc">
+        Pilih tampilan aplikasi untuk portofolio ini.
+      </div>
+
+      <div class="pw-theme-switch">
+        <button
+          type="button"
+          class="pw-theme-option"
+          data-theme="white"
+        >
+          ☀️ White
+        </button>
+
+        <button
+          type="button"
+          class="pw-theme-option"
+          data-theme="black"
+        >
+          🌙 Black
+        </button>
+      </div>
+    `;
+
+    settings.appendChild(card);
+
+    card.querySelectorAll(".pw-theme-option")
+      .forEach(function (button) {
+        button.addEventListener("click", function () {
+          applyTheme(button.dataset.theme);
+        });
+      });
+
+    applyTheme(getTheme());
+  }
+
+  function initTheme() {
+    applyTheme(getTheme());
+    addThemeSetting();
+
+    setTimeout(addThemeSetting, 300);
+    setTimeout(addThemeSetting, 1000);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initTheme);
+  } else {
+    initTheme();
+  }
+
+  window.applyPortfolioTheme = applyTheme;
 })();

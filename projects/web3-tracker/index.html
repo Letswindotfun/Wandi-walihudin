@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Web3 Pulse — Token Tracker Demo</title>
+<style>
+:root{--bg:#090e19;--panel:#111a2b;--line:#26334b;--text:#eaf0ff;--muted:#8795af;--blue:#6685ff;--green:#35d5a0;--gold:#f1bd63;--red:#ff7586}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0,#17294c 0,transparent 38%),var(--bg);color:var(--text);font:14px system-ui,sans-serif}
+button,input,select{font:inherit}button,select,input{border:1px solid var(--line);border-radius:9px;background:#0c1424;color:var(--text);padding:10px 12px}button{cursor:pointer}button:hover{border-color:var(--blue)}
+.app{max-width:1400px;margin:auto;padding:26px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.brand{font-size:22px;font-weight:850;letter-spacing:-.7px}.brand span{color:var(--blue)}.subtitle{color:var(--muted);font-size:12px;margin-top:4px}
+.pill{border:1px solid #2e4566;background:#13243c;color:#9bb8ff;border-radius:20px;padding:7px 11px;font-size:11px}
+h1{font-size:32px;letter-spacing:-1px;margin:28px 0 6px}.desc{color:var(--muted);margin:0 0 22px;line-height:1.6}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}.card{background:linear-gradient(145deg,#141f33,#101827);border:1px solid var(--line);border-radius:14px;padding:17px;min-width:0}.label{font-size:12px;color:var(--muted)}.value{font-size:25px;font-weight:800;margin:10px 0 4px}.hint{font-size:11px;color:var(--green)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0 12px}.toolbar input{flex:1;min-width:180px}.toolbar select{min-width:130px}
+.tablebox{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}.tablehead{padding:17px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid var(--line);flex-wrap:wrap}.tablehead h2{font-size:15px;margin:0}.muted{color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse;text-align:left}th{font-size:11px;color:var(--muted);font-weight:600;background:#0d1525}th,td{padding:15px 17px;border-bottom:1px solid var(--line);white-space:nowrap}tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:#18243a}
+.token{display:flex;align-items:center;gap:10px}.coin{height:36px;width:36px;border-radius:50%;display:grid;place-items:center;background:#243761;color:#b8c9ff;font-weight:800}.token strong{display:block}.token small{color:var(--muted)}.green{color:var(--green)}.yellow{color:var(--gold)}.red{color:var(--red)}.status{display:inline-flex;border-radius:20px;padding:5px 9px;font-size:11px;background:#16382f;color:var(--green)}.status.watch{background:#3b3020;color:var(--gold)}
+.action{background:#17294b;border-color:#304b7a;color:#c7d5ff;font-size:12px}.empty{text-align:center;padding:35px;color:var(--muted)}
+.bottom{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin:16px 2px}.disclaimer{margin-top:18px;padding:13px 15px;border:1px solid #514329;background:#241f17;border-radius:10px;color:#e9c98f;font-size:12px;line-height:1.5}
+@media(max-width:850px){.stats{grid-template-columns:repeat(2,1fr)}.app{padding:17px}.tablebox{overflow-x:auto}table{min-width:760px}h1{font-size:27px}}
+@media(max-width:420px){.stats{gap:8px}.card{padding:12px}.value{font-size:20px}.toolbar>*{width:100%}.app{padding:12px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+<div><div class="brand">WEB3<span>PULSE</span></div><div class="subtitle">Token discovery & market activity dashboard</div></div>
+<div class="pill">● INTERACTIVE DEMO</div>
+</header>
+<h1>Token Explorer</h1>
+<p class="desc">Discover and compare sample tokens by market cap, trading volume, token age, and activity status.</p>
+<section class="stats">
+<div class="card"><div class="label">Tokens Listed</div><div class="value" id="total">8</div><div class="hint">Sample dataset</div></div>
+<div class="card"><div class="label">Combined 24h Volume</div><div class="value" id="volume">$1.84M</div><div class="hint">Illustrative only</div></div>
+<div class="card"><div class="label">Active Tokens</div><div class="value" id="active">6</div><div class="hint">Sample status</div></div>
+<div class="card"><div class="label">Average Token Age</div><div class="value" id="age">18.6h</div><div class="hint">Across sample list</div></div>
+</section>
+<div class="toolbar">
+<input id="search" placeholder="Search token name or symbol..." aria-label="Search tokens">
+<select id="statusFilter" aria-label="Filter by status"><option value="all">All statuses</option><option value="active">Active</option><option value="watch">Watchlist</option></select>
+<select id="ageFilter" aria-label="Filter by age"><option value="all">Any token age</option><option value="5">At least 5 hours</option><option value="12">At least 12 hours</option><option value="24">At least 24 hours</option></select>
+<select id="sort" aria-label="Sort tokens"><option value="volume">Sort: Volume</option><option value="market">Sort: Market cap</option><option value="age">Sort: Token age</option><option value="name">Sort: Name</option></select>
+<button id="reset">Reset</button>
+</div>
+<div class="tablebox">
+<div class="tablehead"><h2>Token Listings</h2><span class="muted" id="count">8 tokens found</span></div>
+<table>
+<thead><tr><th>Token</th><th>Price</th><th>Market Cap</th><th>24h Volume</th><th>Age</th><th>Status</th><th>Action</th></tr></thead>
+<tbody id="rows"></tbody>
+</table>
+<div id="empty" class="empty" hidden>No matching tokens. Try changing your filters.</div>
+</div>
+<div class="disclaimer">Demo disclaimer: all token names, prices, volumes, market caps, ages, and statuses shown here are fictional sample data. This tracker is not connected to a blockchain, exchange, or live market feed. It does not provide trading signals.</div>
+<div class="bottom"><span>WEB3PULSE · Portfolio project</span><span>Sample data · No wallet connection</span></div>
+</div>
+<script>
+const tokens=[
+{name:"Nova Protocol",symbol:"NOVA",price:0.0842,market:2450000,volume:485000,age:36,status:"active"},
+{name:"Orbit Finance",symbol:"ORBT",price:0.126,market:1820000,volume:362000,age:18,status:"active"},
+{name:"Pixel Forge",symbol:"PXFG",price:0.0094,market:740000,volume:284000,age:8,status:"active"},
+{name:"Aether Labs",symbol:"AETH",price:0.317,market:3980000,volume:241000,age:52,status:"active"},
+{name:"Mango Byte",symbol:"MGBT",price:0.0028,market:365000,volume:198000,age:6,status:"watch"},
+{name:"Solaris Network",symbol:"SLRS",price:0.056,market:1260000,volume:157000,age:26,status:"active"},
+{name:"Cloud Mint",symbol:"CLMT",price:0.0182,market:530000,volume:82000,age:3,status:"watch"},
+{name:"Drift Labs",symbol:"DRFT",price:0.072,market:950000,volume:31000,age:0.8,status:"active"}
+];
+const $=id=>document.getElementById(id);
+const usd=n=>n.toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:n<1?4:0});
+const compact=n=>"$"+(n>=1e6?(n/1e6).toFixed(2)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":n.toFixed(0));
+function render(){
+let q=$("search").value.trim().toLowerCase(),sf=$("statusFilter").value,af=$("ageFilter").value,sort=$("sort").value;
+let list=tokens.filter(t=>(t.name+" "+t.symbol).toLowerCase().includes(q)&&(sf==="all"||t.status===sf)&&(af==="all"||t.age>=Number(af)));
+list.sort((a,b)=>sort==="market"?b.market-a.market:sort==="age"?b.age-a.age:sort==="name"?a.name.localeCompare(b.name):b.volume-a.volume);
+$("rows").innerHTML="";
+list.forEach(t=>{
+let tr=document.createElement("tr");
+tr.innerHTML='<td><div class="token"><div class="coin">'+t.symbol.slice(0,1)+'</div><div><strong>'+t.name+'</strong><small>'+t.symbol+'</small></div></div></td><td>'+usd(t.price)+'</td><td>'+compact(t.market)+'</td><td>'+compact(t.volume)+'</td><td>'+t.age+'h</td><td><span class="status '+(t.status==="watch"?"watch":"")+'">'+(t.status==="watch"?"Watchlist":"Active")+'</span></td><td><button class="action" data-token="'+t.symbol+'">Details</button></td>';
+$("rows").append(tr);
+});
+$("empty").hidden=list.length!==0;
+$("count").textContent=list.length+" token"+(list.length===1?"":"s")+" found";
+$("total").textContent=tokens.length;
+$("volume").textContent=compact(tokens.reduce((s,t)=>s+t.volume,0));
+$("active").textContent=tokens.filter(t=>t.status==="active").length;
+$("age").textContent=(tokens.reduce((s,t)=>s+t.age,0)/tokens.length).toFixed(1)+"h";
+}
+["search","statusFilter","ageFilter","sort"].forEach(id=>$(id).addEventListener(id==="search"?"input":"change",render));
+$("reset").onclick=()=>{$("search").value="";$("statusFilter").value="all";$("ageFilter").value="all";$("sort").value="volume";render()};
+$("rows").addEventListener("click",e=>{let b=e.target.closest("[data-token]");if(!b)return;let t=tokens.find(x=>x.symbol===b.dataset.token);alert(t.name+" ("+t.symbol+")\n\nPrice: "+usd(t.price)+"\nMarket cap: "+compact(t.market)+"\n24h volume: "+compact(t.volume)+"\nToken age: "+t.age+" hours\nStatus: "+t.status+"\n\nFictional sample data — not live market information.")});
+render();
+</script>
+</body>
+</html>
