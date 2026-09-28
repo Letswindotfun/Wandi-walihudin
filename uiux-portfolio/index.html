@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Wandi — UI/UX Designer & Frontend Developer portfolio.">
+  <title>Wandi — UI/UX Designer & Frontend Developer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="#top">WANDI<span>.</span></a>
+    <button class="menu-toggle" aria-label="Open menu" aria-expanded="false">☰</button>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="#work">Work</a>
+      <a href="#process">Process</a>
+      <a href="#skills">Skills</a>
+      <a href="#contact">Contact</a>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">◐</button>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-content">
+        <div class="eyebrow">UI/UX DESIGNER · FRONTEND DEVELOPER</div>
+        <h1>I design simple digital products that solve real problems.</h1>
+        <p class="hero-copy">I combine UX thinking, clean interfaces, and frontend development to turn product ideas into usable experiences.</p>
+        <div class="actions">
+          <a class="btn primary" href="#work">View Projects <span>↓</span></a>
+          <a class="btn secondary" href="#contact">Contact Me</a>
+        </div>
+        <div class="proof-strip">
+          <span>03 selected projects</span>
+          <span>Interactive work</span>
+          <span>Design + Build</span>
+        </div>
+      </div>
+
+      <div class="hero-visual" aria-label="Portfolio visual gallery">
+        <div class="hero-gallery">
+          <div class="hero-image hero-image-main"><img src="assets/hero-blue-gold-1.jpg" alt="Blue and gold abstract design" loading="eager"></div>
+          <div class="hero-image hero-image-two"><img src="assets/hero-blue-gold-2.jpg" alt="Blue and gold flowing abstract design" loading="eager"></div>
+          <div class="hero-image hero-image-three"><img src="assets/hero-blue-gold-3.jpg" alt="Light blue and gold abstract design" loading="eager"></div>
+          <div class="hero-image hero-image-four"><img src="assets/hero-blue-gold-4.jpg" alt="Dark blue and gold wave design" loading="eager"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="work" class="section work-section">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">MY PROJECTS</div>
+          <h2>Featured Works</h2>
+        </div>
+        <p>A selection of UI/UX and frontend projects built around clear problems and practical interfaces.</p>
+      </div>
+      <div class="project-grid">
+        <article class="project-card">
+          <div class="project-image"><img src="assets/business-dashboard.jpg?v=3" alt="Business Dashboard project preview" loading="lazy"></div>
+          <div class="project-card-body">
+            <div class="project-number">01</div><div class="project-meta">BUSINESS · DASHBOARD</div>
+            <h3>Business Dashboard</h3>
+            <p>Finance and operations dashboard for tracking revenue, expenses, cash flow, sales, customers, products, and performance.</p>
+            <div class="tags"><span>UI/UX</span><span>Dashboard</span><span>Frontend</span></div>
+            <button class="text-btn project-open" data-project="business">View Case Study <span>→</span></button>
+          </div>
+        </article>
+        <article class="project-card">
+          <div class="project-image"><img src="assets/web3-tracker.jpg?v=3" alt="Web3 Tracker project preview" loading="lazy"></div>
+          <div class="project-card-body">
+            <div class="project-number">02</div><div class="project-meta">WEB3 · TRACKER</div>
+            <h3>Web3 Tracker</h3>
+            <p>A focused token discovery and filtering interface designed to make fast-moving Web3 data easier to scan.</p>
+            <div class="tags"><span>UX</span><span>Data UI</span><span>Web3</span></div>
+            <button class="text-btn project-open" data-project="web3">View Case Study <span>→</span></button>
+          </div>
+        </article>
+        <article class="project-card">
+          <div class="project-image"><img src="assets/game-interface.jpg?v=3" alt="Game Interface project preview" loading="lazy"></div>
+          <div class="project-card-body">
+            <div class="project-number">03</div><div class="project-meta">GAME · UI/UX</div>
+            <h3>Game Interface</h3>
+            <p>Game UI concept covering HUD, inventory, character information, quests, abilities, and navigation.</p>
+            <div class="tags"><span>Game UI</span><span>UX Flow</span><span>Prototype</span></div>
+            <button class="text-btn project-open" data-project="game">View Case Study <span>→</span></button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="process" class="section process-section">
+      <div class="eyebrow">HOW I WORK</div><h2>Simple process. Clear outcome.</h2>
+      <div class="process-grid">
+        <div><b>01</b><h3>Problem</h3><p>Understand what is difficult, slow, confusing, or missing.</p></div>
+        <div><b>02</b><h3>Understand</h3><p>Define the user, goal, constraints, and useful information.</p></div>
+        <div><b>03</b><h3>Design</h3><p>Create the flow and interface around the most important task.</p></div>
+        <div><b>04</b><h3>Build</h3><p>Turn the design into a responsive and interactive experience.</p></div>
+        <div><b>05</b><h3>Test</h3><p>Check whether the interface is understandable and usable.</p></div>
+      </div>
+    </section>
+
+    <section id="skills" class="section skills-section">
+      <div class="eyebrow">SKILLS</div><h2>Design + development.</h2>
+      <div class="skill-list">
+        <span>UI/UX Design</span><span>Figma</span><span>Wireframing</span><span>Prototyping</span><span>Responsive Design</span><span>HTML</span><span>CSS</span><span>JavaScript</span><span>Interactive UI</span>
+      </div>
+    </section>
+
+    <section id="contact" class="contact">
+      <div class="eyebrow">LET'S WORK TOGETHER</div><h2>Have a problem that needs a simple digital solution?</h2>
+      <p>Tell me what you are building. I can help turn the idea into a clear, usable interface.</p>
+      <a class="btn primary" href="mailto:your-email@example.com">Contact Me <span>↗</span></a>
+      <small>Replace the email address with your real contact before publishing.</small>
+    </section>
+  </main>
+
+  <footer><span>© <span id="year"></span> Wandi</span><span>UI/UX · Frontend</span></footer>
+
+  <div class="modal" id="projectModal" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" data-close aria-label="Close">×</button>
+      <div class="eyebrow" id="modalType"></div><h2 id="modalTitle"></h2>
+      <div class="case-grid">
+        <div><span>PROBLEM</span><p id="modalProblem"></p></div><div><span>SOLUTION</span><p id="modalSolution"></p></div>
+        <div><span>WHAT I BUILT</span><p id="modalBuilt"></p></div><div><span>EVIDENCE</span><p id="modalEvidence"></p></div>
+      </div>
+      <a id="modalDemo" class="btn primary" href="#" target="_blank" rel="noopener">Open Demo ↗</a>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

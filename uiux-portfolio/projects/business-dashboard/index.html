@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Business Hub — Demo</title>
+<style>
+:root{--bg:#f3f6fb;--panel:#fff;--text:#17243a;--muted:#78859a;--line:#e4eaf3;--blue:#4169f5;--gold:#d9a441}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui;transition:.2s}
+body.dark{--bg:#0b1020;--panel:#141c30;--text:#edf2ff;--muted:#9aa8c2;--line:#27334d}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:24px 15px}
+.brand{font-size:19px;font-weight:800;margin-bottom:30px}.brand span{background:var(--blue);color:white;padding:8px 11px;border-radius:10px;margin-right:8px}
+nav{display:grid;gap:7px}nav button{padding:12px;text-align:left;border:0;border-radius:9px;background:transparent;color:var(--muted);cursor:pointer}nav button.active,nav button:hover{background:#4169f51a;color:var(--blue)}
+main{padding:28px;max-width:1400px;width:100%;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
+h1{font-size:28px;margin:4px 0}.muted{color:var(--muted);font-size:12px}
+button,select{font:inherit}.action{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:9px;padding:10px 12px;cursor:pointer}
+.notice{display:inline-block;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--muted);font-size:11px;margin-bottom:16px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:19px;min-width:0;margin-bottom:15px}
+.label{color:var(--muted);font-size:12px}.value{font-size:clamp(19px,2.4vw,28px);font-weight:800;margin:12px 0;overflow-wrap:anywhere}.positive{color:#18a875;font-size:12px}
+.columns{display:grid;grid-template-columns:1.6fr 1fr;gap:15px}.card h2{font-size:15px;margin:0 0 5px}
+.chart{height:210px;display:flex;align-items:flex-end;gap:clamp(8px,2vw,24px);padding:15px 8px 0;border-bottom:1px solid var(--line);background:repeating-linear-gradient(to bottom,transparent 0,transparent 51px,var(--line) 52px)}
+.bar-group{flex:1;display:flex;align-items:flex-end;justify-content:center;gap:5px;height:100%}.bar{width:35%;max-width:24px;border-radius:5px 5px 0 0;background:var(--blue)}.bar.expense{background:var(--gold)}
+.labels{display:flex;justify-content:space-around;color:var(--muted);font-size:11px;padding-top:8px}
+.legend{font-size:11px;color:var(--muted);margin:15px 0}.legend b{color:var(--blue)}.legend i{color:var(--gold);font-style:normal}
+.progress{height:8px;background:var(--line);border-radius:20px;overflow:hidden;margin:10px 0 18px}.progress span{display:block;height:100%;background:var(--blue)}
+.row{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}.row:last-child{border:0}
+.view{display:none}.view.active{display:block}.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:12px 16px;background:var(--text);color:var(--panel);border-radius:10px;display:none}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.columns{grid-template-columns:1fr}}
+@media(max-width:600px){.app{grid-template-columns:1fr}aside{padding:12px;position:sticky;top:0;z-index:2;border-right:0;border-bottom:1px solid var(--line)}.brand{margin:0 0 10px}nav{grid-template-columns:repeat(3,1fr);gap:4px}nav button{padding:8px;font-size:12px;text-align:center}main{padding:18px 12px}.top{align-items:flex-start}h1{font-size:22px}.card{padding:14px}.value{font-size:19px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+<div class="brand"><span>B</span>Business Hub</div>
+<nav id="nav">
+<button class="active" data-view="dashboard">▦ Dashboard</button>
+<button data-view="finance">◈ Finance</button>
+<button data-view="sales">↗ Sales</button>
+<button data-view="customers">♙ Customers</button>
+<button data-view="products">◇ Products</button>
+<button data-view="reports">▤ Reports</button>
+<button data-view="settings">⚙ Settings</button>
+</nav>
+<p class="muted" style="margin-top:30px">Portfolio demonstration<br>Illustrative data only</p>
+</aside>
+<main>
+<div class="top"><div><div class="muted">BUSINESS OVERVIEW</div><h1 id="pageTitle">Executive Dashboard</h1></div><div><select class="action" id="period"><option value="30">30 days</option><option value="7">7 days</option><option value="90">3 months</option><option value="365">1 year</option></select> <button class="action" id="theme">☾</button></div></div>
+<div class="notice">● DEMO DATA — Not connected to a real business</div>
+<section class="view active" data-section="dashboard">
+<div class="kpis">
+<div class="card"><div class="label">Total Revenue</div><div class="value" id="revenue">Rp842.500.000</div><div class="positive">↑ Illustrative data</div></div>
+<div class="card"><div class="label">Total Expenses</div><div class="value" id="expenses">Rp521.200.000</div><div class="muted">Operating costs</div></div>
+<div class="card"><div class="label">Net Profit</div><div class="value" id="profit">Rp321.300.000</div><div class="positive">38,1% margin</div></div>
+<div class="card"><div class="label">Cash Balance</div><div class="value" id="cash">Rp1.240.000.000</div><div class="muted">Sample balance</div></div>
+</div>
+<div class="columns">
+<div class="card"><h2>Revenue vs Expenses</h2><p class="muted">Financial overview</p><div class="legend"><b>■ Revenue</b> &nbsp; <i>■ Expenses</i></div><div class="chart" id="chart"></div><div class="labels" id="labels"></div></div>
+<div class="card"><h2>Expense Breakdown</h2><p class="muted">Illustrative allocation</p>
+<div class="row"><span>Operations</span><b>Rp208,5M</b></div><div class="progress"><span style="width:72%"></span></div>
+<div class="row"><span>Marketing</span><b>Rp126,4M</b></div><div class="progress"><span style="width:48%;background:var(--gold)"></span></div>
+<div class="row"><span>Payroll</span><b>Rp114,2M</b></div><div class="progress"><span style="width:42%;background:#18a875"></span></div>
+</div></div>
+<div class="columns">
+<div class="card"><h2>Recent Transactions</h2><div class="row"><span>Client payment received</span><b class="positive">+Rp24,5M</b></div><div class="row"><span>Software subscription</span><b>−Rp1,25M</b></div><div class="row"><span>Product sales settlement</span><b class="positive">+Rp8,75M</b></div></div>
+<div class="card"><h2>Sales Target</h2><div class="value">72%</div><div class="progress"><span style="width:72%"></span></div><div class="row"><span class="muted">Achieved</span><b>Rp720M</b></div><div class="row"><span class="muted">Target</span><b>Rp1.000M</b></div></div>
+</div>
+</section>
+<section class="view" data-section="finance"><div class="card"><h2>Finance Overview</h2><p class="muted">Summary based on the selected illustrative period.</p><div class="row"><span>Revenue</span><b id="fr">Rp842.500.000</b></div><div class="row"><span>Expenses</span><b id="fe">Rp521.200.000</b></div><div class="row"><span>Net Profit</span><b id="fp">Rp321.300.000</b></div></div></section>
+<section class="view" data-section="sales"><div class="card"><h2>Sales Overview</h2><p class="muted">Illustrative sales target progress.</p><div class="value">72%</div><div class="progress"><span style="width:72%"></span></div><div class="row"><span>Target</span><b>Rp1.000M</b></div><div class="row"><span>Achieved</span><b>Rp720M</b></div></div></section>
+<section class="view" data-section="customers"><div class="card"><h2>Customers</h2><p class="muted">Demo records only. Additions are temporary.</p><button class="action" id="addCustomer">＋ Add sample customer</button><div id="customerList"><div class="row"><span>Northstar Studio</span><b>Active</b></div><div class="row"><span>Meridian Supply</span><b>Active</b></div></div></div></section>
+<section class="view" data-section="products"><div class="card"><h2>Products</h2><p class="muted">Sample catalog.</p><button class="action" id="addProduct">＋ Add sample product</button><div id="productList"><div class="row"><span>Starter Package</span><b>Rp2,5M</b></div><div class="row"><span>Business Package</span><b>Rp7,5M</b></div></div></div></section>
+<section class="view" data-section="reports"><div class="card"><h2>Reports</h2><p class="muted">Export the current sample KPI figures as CSV.</p><button class="action" id="export">Export CSV ↓</button></div></section>
+<section class="view" data-section="settings"><div class="card"><h2>Appearance Settings</h2><p class="muted">Choose the dashboard theme.</p><button class="action" id="light">☀ Light</button> <button class="action" id="dark">☾ Dark</button></div></section>
+<p class="muted" style="text-align:center;margin-top:25px">Business Hub · Portfolio demo · Sample data only</p>
+</main></div><div class="toast" id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const data={30:{r:842500000,e:521200000,c:1240000000,l:['May','Jun','Jul','Aug','Sep'],rv:[62,72,66,83,100],ex:[48,56,52,65,75]},7:{r:196500000,e:118200000,c:1240000000,l:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],rv:[52,64,60,76,68,88,100],ex:[36,43,48,40,57,60,68]},90:{r:2310000000,e:1490000000,c:1240000000,l:['Jul','Aug','Sep'],rv:[70,82,100],ex:[58,68,76]},365:{r:9250000000,e:6180000000,c:1240000000,l:['Q1','Q2','Q3','Q4'],rv:[60,72,84,100],ex:[48,60,72,74]}};
+const money=n=>'Rp'+Math.round(n).toLocaleString('id-ID');
+function render(){let d=data[$('period').value],p=d.r-d.e;$('revenue').textContent=money(d.r);$('expenses').textContent=money(d.e);$('profit').textContent=money(p);$('cash').textContent=money(d.c);$('fr').textContent=money(d.r);$('fe').textContent=money(d.e);$('fp').textContent=money(p);$('chart').innerHTML='';$('labels').innerHTML='';d.l.forEach((m,i)=>{let g=document.createElement('div');g.className='bar-group';let a=document.createElement('div');a.className='bar';a.style.height=d.rv[i]+'%';let b=document.createElement('div');b.className='bar expense';b.style.height=d.ex[i]+'%';g.append(a,b);$('chart').append(g);let t=document.createElement('span');t.textContent=m;$('labels').append(t)})}
+const titles={dashboard:'Executive Dashboard',finance:'Finance Overview',sales:'Sales Overview',customers:'Customers',products:'Products',reports:'Reports',settings:'Settings'};
+$('nav').addEventListener('click',e=>{let b=e.target.closest('[data-view]');if(!b)return;document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.dataset.section===b.dataset.view));$('pageTitle').textContent=titles[b.dataset.view];});
+$('period').addEventListener('change',render);
+function setTheme(d){document.body.classList.toggle('dark',d);localStorage.setItem('businessHubDemoTheme',d?'dark':'light')}
+$('theme').onclick=()=>setTheme(!document.body.classList.contains('dark'));$('light').onclick=()=>setTheme(false);$('dark').onclick=()=>setTheme(true);if(localStorage.getItem('businessHubDemoTheme')==='dark')setTheme(true);
+$('addCustomer').onclick=()=>{let r=document.createElement('div');r.className='row';r.innerHTML='<span>New Sample Customer</span><b>Active</b>';$('customerList').append(r)};
+$('addProduct').onclick=()=>{let r=document.createElement('div');r.className='row';r.innerHTML='<span>New Sample Product</span><b>Rp1M</b>';$('productList').append(r)};
+$('export').onclick=()=>{let d=data[$('period').value],csv='Metric,Illustrative Value\nRevenue,'+d.r+'\nExpenses,'+d.e+'\nNet Profit,'+(d.r-d.e)+'\nCash Balance,'+d.c;let u=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));let a=document.createElement('a');a.href=u;a.download='business-hub-demo.csv';a.click();URL.revokeObjectURL(u)};
+render();
+</script></body></html>
